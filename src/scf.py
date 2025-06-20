@@ -28,11 +28,7 @@ def scf_rhf(
     # Build integral arrays
     S, H_core, eri_dict = build_integral_arrays(primitives, pos, R, Z)
 
-    key_eri = canonical_eri_key(1, 1, 1, 1)
-    check_eri = eri_dict[key_eri]
-    
-    print("eri: ", check_eri)
-
+   
     # Number of basis functions and electrons
     nbf = S.shape[0]
     n_occ = n_elec // 2  # Number of occupied orbitals (doubly occupied)
@@ -42,7 +38,7 @@ def scf_rhf(
         print(f"Number of electrons: {n_elec}")
         print(f"Number of occupied orbitals: {n_occ}")
         print(f"Bond distance: {R:.3f} au")
-        print("-" * 50)
+        # print("-" * 50)
     
     # Symmetric orthogonalization: X = S^(-1/2)
     # This transforms the basis to an orthonormal one
@@ -100,7 +96,7 @@ def scf_rhf(
         
         # Check for convergence
         if rms_change < conv_tol and iteration > 0:
-            if verbose >= 1:
+            if verbose >= 3:
                 print(f"\nSCF converged in {iteration + 1} iterations!")
                 print(f"Final electronic energy: {E_elec:.8f} au")
                 print(f"Final total energy:      {E_total:.8f} au")
@@ -133,7 +129,7 @@ def scf_rhf(
     if verbose >= 1:
         print_final_results(results)
     
-    return results
+    return
 
 def get_initial_guess(S: np.ndarray, Z_list: list) -> np.ndarray:
     """Guess based on atomic charges"""
@@ -184,32 +180,28 @@ def build_fock_matrix_sparse(H_core: np.ndarray, P: np.ndarray, eri_dict: dict) 
 
     return H_core + G
 
-
 def print_final_results(results):
-    """Print formatted final results"""
+    """Print formatted final SCF results"""
     print("\n" + "="*60)
     print("FINAL SCF RESULTS")
     print("="*60)
+
+    print(f"{'Electronic energy:':<25}{results['energy_electronic']:>12.6f}  Ha")
+    print(f"{'Nuclear repulsion:':<25}{results['energy_nuclear']:>12.6f}  Ha")
+    print(f"{'Total energy:':<25}{results['energy_total']:>12.6f}  Ha")
+    print(f"{'SCF iterations:':<25}{results['iterations']:>12d}")
+    print(f"{'Converged:':<25}{str(results['converged']):>12}")
     
-    print(f"Electronic energy:    {results['energy_electronic']:15.8f} au")
-    print(f"Nuclear repulsion:    {results['energy_nuclear']:15.8f} au")
-    print(f"Total energy:         {results['energy_total']:15.8f} au")
-    print(f"Converged in:         {results['iterations']:15d} iterations")
+    print("\nOrbital energies (Ha):")
+    for i, energy in enumerate(results['orbital_energies']):
+        print(f"  ε_{i+1} = {energy:>10.6f}")
     
-    # print(f"\nOrbital energies (au):")
-    # for i, energy in enumerate(results['orbital_energies']):
-    #     print(f"  Orbital {i+1}: {energy:12.6f}")
+    print("\nOrbital Coefficients (C):")
+    C = results['orbital_coefficients']
+    for i in range(C.shape[1]):
+        coeffs = "  ".join(f"{val:>8.4f}" for val in C[:, i])
+        print(f"  Orbital {i+1:<2}: {coeffs}")
     
-    # print(f"\nOrbital coefficients:")
-    # C = results['orbital_coefficients']
-    # for i in range(C.shape[1]):
-    #     print(f"  Orbital {i+1}: [{C[0,i]:8.4f}, {C[1,i]:8.4f}]")
-    
-    # Mulliken population analysis
-    # PS = results['density_matrix'] @ results['overlap_matrix']
-    # print(f"\nMulliken populations:")
-    # for i in range(len(PS)):
-    #     print(f"  Atom {i+1}: {PS[i,i]:8.4f}")
 
 
 # Example usage and test cases
@@ -219,7 +211,7 @@ if __name__ == "__main__":
     
     print("Testing SCF implementation...")
     print("\n1. H2 molecule at R = 1.4 au")
-    print("-" * 40)
+    print("-" * 60)
  
     # For H2 (H: Zeta=1.24)
     sto3g_h = build_sto3g_basis(zeta=1.24)    # Hydrogen basis
@@ -229,10 +221,10 @@ if __name__ == "__main__":
 
     pos_h2 = np.array([[0,0,0],[1.4,0,0]])
     Z_h2 = (1.0,1.0)
-    results_H2 = scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
+    scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
     
     print("\n2. HeH+ ion at R = 1.4 au")
-    print("-" * 40)
+    print("-" * 60)
 
     # For HeH+ (He: Zeta=2.095, H: Zeta=1.24)
     sto3g_he = build_sto3g_basis(zeta=2.095)  # Helium basis
@@ -241,7 +233,7 @@ if __name__ == "__main__":
     
     pos_heh = np.array([[0,0,0],[1.4632,0,0]])
     Z_heh = (2.0,1.0)
-    results_HeH = scf_rhf(primitives_heh, pos=pos_heh, R=1.4632, Z=Z_heh, n_elec=2, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
+    scf_rhf(primitives_heh, pos=pos_heh, R=1.4632, Z=Z_heh, n_elec=2, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
 
     # print("Testing SCF implementation...")
     # print("\n3. LiH molecule at R = 1.6 au")
