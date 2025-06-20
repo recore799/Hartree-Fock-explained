@@ -99,4 +99,4 @@ HF/
 Rafael Corella - a220211866@unison.mx
 Estudiante de Física, Universidad de Sonora
 
-Trabajo de investigación para presentación en congreso nacional de física 20205
+Trabajo de investigación para presentación en congreso nacional de física 2025
