@@ -1,9 +1,11 @@
-# RHF: Implementación simple del método de Hartree-Fock restringido
+# Implementación del Método de Hartree-Fock (HF) en Python: Una Herramienta Educativa y de Investigación
 
-Este repositorio contiene una implementación desde cero del método *Hartree-Fock restringido (RHF)* en Python, basada en el formalismo presentado en _Modern Quantum Chemistry_ de Szabo y Ostlund.
+Este proyecto busca proporcionar una implementación accesible y didáctica del método HF, útil para estudiantes e investigadores en química cuántica.
+
+En presente se cuenta con un cálculo desde cero del método *Hartree-Fock restringido (RHF)* en Python, basada en el formalismo presentado en _Modern Quantum Chemistry_ de Szabo y Ostlund.
 El código fue escrito con énfasis en claridad, modularidad y extensibilidad, con el objetivo de servir como base para métodos más avanzados (post-HF y DFT).
 
-# Características
+## Características
 
 - Cálculo de integrales de un electrón
 - Evaluación eficiente del tensor de 2-electrones `⟨μν|λσ⟩` con simetría
@@ -11,7 +13,7 @@ El código fue escrito con énfasis en claridad, modularidad y extensibilidad, c
 - Soporte para moléculas con base STO-3G y nucleos en 3D
 - Resultados validados contra valores de referencia
 
-# Resultados de ejemplo
+## Resultados de ejemplo
 
 A continuación se muestra un cálculo típico para las moléculas *H₂* y *HeH⁺* con base mínima STO-3G:
 
@@ -66,16 +68,16 @@ Orbital Coefficients (C):
 ```
 
 
-# Como correr los cálculos
+### Como correr los cálculos
 ```text
 python src/scf.py
 ```
 
-# Extensiones
+## Extensiones
 
 - Estoy trabajando en soporte para moléculas arbitrarias, en particular estoy tomando a la molécula LiH como una primera extensión. Para validar estos resultados estoy creando pruebas unitarias con referencia a los resultados dados por la libreria _pySCF_.
 
-# Estructura del proyecto
+## Estructura del proyecto
 
 ```text
 HF/
@@ -93,12 +95,12 @@ HF/
 ```
 
 
-# Referencias
+## Referencias
 
 * Szabo, A., & Ostlund, N. S. (1996). Modern Quantum Chemistry: Introduction to Advanced Electronic Structure Theory.
 
 
-# Autor
+## Autor
 Rafael Corella - a220211866@unison.mx
 Estudiante de Física, Universidad de Sonora
 
