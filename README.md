@@ -82,11 +82,14 @@ HF/
 ├── src/
 │   ├── integrals.py         # Construcción de matrices S, T, V, eri
 │   ├── scf.py               # Loop SCF y funciones auxiliares
-│   └── sto3g-basis.py             # Normalización y funciones generales
+│   └── sto3g-basis.py       # Construcción de la base en términos de primitivas gaussianas
 ├── tests/
 │   ├── test_integrals.py    # Pruebas unitarias de matrices
 │   └── ...
 ├── README.md
+├── docs/
+│   ├── HF.pdf                # Documentación del proceso SCF (en proceso)
+│   └── HF.org                # Código fuente de la documentación
 ```
 
 

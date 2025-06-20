@@ -1,0 +1,339 @@
+% Created 2025-06-19 Thu 17:39
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{physics}
+\usepackage{bm}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{mathrsfs}
+\author{Rafael Corella}
+\date{\today}
+\title{Hartree-Fock theory}
+\hypersetup{
+ pdfauthor={Rafael Corella},
+ pdftitle={Hartree-Fock theory},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={},
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\section{SCF Implementation}
+\label{sec:org4d05cdf}
+
+\subsection{Roothaan equations}
+\label{sec:org1db0400}
+
+\begin{itemize}
+\item Once the spin is integrated out, the HF equations in spatial orbital form are
+
+\[ f(r_1)\psi_i(r_1) = \epsilon_i\psi_i(r_1) \]
+
+\item Introducing a basis
+
+\[ \psi_i = \sum_{\mu = 1}^K C_{\mu i }\phi_{\mu} \]
+
+leads to the integrated HF equations in matrix form, the \textbf{Roothaan} equations
+
+\[ FC = SC\epsilon \]
+
+\begin{itemize}
+\item The fock matrix \(F\) has elements
+
+\[ F_{\mu\nu} = \int \dd{r_1}\phi_{\mu}^{* }(1)f(1) \phi_{\nu}(1) \]
+
+\item The overlap matrix \(S\) has elements
+
+\[ S_{\mu\nu} = \int \dd{r_1} \phi_{\mu}^{ * }(1) \phi_{\nu}(1) \]
+
+\item The expansion coefficients \(C_{\mu i}\) form a \(K\times K\) matrix \(C\)
+
+\[ C = \pmqty{C_{11} & C_{12} & \cdots & C_{1K} \\ C_{21} & C_{22} & \cdots & C_{2K} \\ \vdots & \vdots & & \vdots \\ C_{K1} & C_{K2} & \cdots & C_{KK} } \]
+
+Las columnas de esta matriz describen a los orbitales moleculares, i.e. \(\psi_i = \sum_{\mu}C_{\mu i}\phi_{\mu}\)
+
+\item The orbital energies \(\epsilon_i\) in matrix form are
+
+\[ \epsilon = \pmqty{\epsilon_1 & & & \\ & \epsilon_2 & & 0 \\ 0 & & \ddots  \\ &&& \epsilon_k} \]
+\end{itemize}
+\end{itemize}
+\subsection{Density matrix}
+\label{sec:org4371283}
+
+In restricted HF (for closed-shell) molecules, the charge density is
+
+\[ \rho(r) = 2 \sum_a^{N/2} |\psi_a(r)|^2 \]
+
+Introducing the basis expansion gives
+
+\begin{align*}
+    \rho(r) &= \sum_{\mu\nu}\qty[2\sum_a^{N/2}C_{\mu a}C_{\nu a}^{ * }]\phi_{\mu}(r)\phi_{\nu}^{ * }(r) \\
+    \rho(r) &= \sum_{\mu\nu} P_{\mu\nu}\phi_{\mu}(r)\phi_{\nu}^{ * }(r)
+\end{align*}
+
+then the density matrix is
+
+\begin{equation}
+\label{eq:P-mat}
+P_{\mu\nu}= 2 \sum_a^{N/2} C_{\mu a}C_{\nu a}^{ * }
+\end{equation}
+\subsection{Fock matrix}
+\label{sec:org8223d82}
+
+The matrix representation of the Fock operator \(f(1) = h(1) + \displaystyle\sum_a^{N/2} 2J_a(1) - K_a(1)\) in the basis \(\{\phi_{\mu}\}\) is
+
+\begin{align*}
+    F_{\mu\nu} &= \int\dd{r_1} \phi_{\mu}^{ * }(1)h(1)\phi_{\mu}(1) + \sum_a^{N/2}\int\dd{r_1}\phi_{\mu}^{ * }(1)[2J_a(1)-K_a(1)]\phi_{\nu}(1) \\
+    F_{\mu\nu} &= H_{\mu\nu}^{\text{core}} + \sum_a^{N/2} 2 (\mu\nu|aa) - (\mu a|a \nu)
+\end{align*}
+
+\begin{itemize}
+\item Here, the core-Hamiltonian matrix is
+
+\[ H_{\mu\nu}^{\text{core}} = \int \dd{r_1} \phi_{\mu}^{ * }(1)h(1)\phi_{\mu}(1) \]
+
+to evaluate this matrix, we need the kinetic energy integrals and the nuclear attraction integrals
+
+\[ H_{\mu\nu}^{\text{core}} = T_{\mu\nu}+ V_{\mu\nu}^{\text{nucl}} \]
+
+This matrix need only be evaluated once in the SCF procedure
+\end{itemize}
+
+
+\begin{itemize}
+\item In the Fock matrix, when we insert the linear expansion of the molecular orbitals into the two-electron terms
+\end{itemize}
+
+
+\begin{align*}
+    F_{\mu\nu} &= H_{\mu\nu}^{\text{core}} + \sum_a^{N/2}\sum_{\lambda\sigma}C_{\lambda a}C_{\sigma a}^{ * }[2(\mu\nu|\sigma\lambda) - (\mu\lambda|\sigma\nu)] \\
+    F_{\mu\nu} &= H_{\mu\nu}^{\text{core}} \sum_{\lambda\alpha} P_{\lambda\sigma}[(\mu\nu|\sigma\lambda) - \frac{1}{2}(\mu\lambda|\sigma\nu)] \\
+    F_{\mu\nu} &= H_{\mu\nu}^{\text{core}} + G_{\mu\nu}
+\end{align*}
+
+where \(G_{\mu\nu}\) is the two-electron part of the Fock matrix
+
+\begin{equation}
+\label{eq:G-mat}
+G_{\mu\nu}= \sum_{\lambda\alpha} P_{\lambda\sigma}[(\mu\nu|\sigma\lambda) - \frac{1}{2}(\mu\lambda|\sigma\nu)]
+\end{equation}
+
+\begin{itemize}
+\item The two-electron integrals are
+
+\[ (\mu\nu|\lambda\sigma) = \int\dd{r_1}\dd{r_2} \phi_{\mu}^{ * }(1)\phi_{\nu}(1)r_{12}^{-1}\phi_{\lambda}^{ * }(2)\phi_{\sigma}(2) \]
+\end{itemize}
+\subsection{Canonical orthogonalization}
+\label{sec:org13207c7}
+
+The condition that a transformation matrix \(X\) must obey in order to form an orthonormal set
+
+\[ \int\dd{r} \phi_{\mu}'^{ * } (r) \phi_{\nu}' (r) = \delta_{\mu\nu}\]
+
+is
+
+\[ X^{\dagger}S X = \mathbb{I} \]
+
+Canonical orthogonalization uses a transformation matrix
+
+\begin{equation}
+\label{eq:X-mat}
+X = Us^{-1/2}
+\end{equation}
+
+where \(U\) is a unitary matrix that diagonalizes \(S\)
+
+\[ U^{\dagger}SU=s \]
+
+and \(s\) is a diagonal matrix of the eigenvalues of \(S\)
+
+Consider a new coefficient matrix \(C'\) related to the old coefficient matrix \(C\) by
+
+\begin{equation}
+\label{eq:C-trans}
+C' = X^{-1}C \qc C = X C'
+\end{equation}
+
+substituting \(C\) into the Roothaan equations gives
+
+\[ F XC' = SXC' \epsilon \]
+
+if we define a new matrix \(F'\) by
+
+\begin{equation}
+\label{eq:F-trans}
+F' = X^{\dagger} FX
+\end{equation}
+
+and use the orthonormality condition on \(S\), \(X^{\dagger}SX=\mathbb{I}\), then by multiplying on the left by \(X^{\dagger}\)
+
+\begin{equation}
+\label{eq:rooth-trans}
+F' C' = C' \epsilon
+\end{equation}
+
+this transformed Roothaan equations can be solved for \(C'\) by diagonalizing \(F'\), which can be used to get \(C\).
+
+Therefore, given \(F\), we can use (\ref{eq:rooth-trans}), (\ref{eq:F-trans}), and (\ref{eq:C-trans}) to solve the Roothaan equations \(FC=SC\epsilon\) for \(C\) and \(\epsilon\)
+\subsection{SCF procedure}
+\label{sec:org8911117}
+
+The Hartree-Fock limit is when the basis set is essentially complete and Hartree-Fock procedure is used in this case, but it can also be used in this case interchangeable as SCF procedure
+
+\begin{enumerate}
+\item Specify a molecule, which is a set of nuclear coordinate \(\{R_A\}\), atomic numbers \(\{Z_A\}\), and number of electrons \(N\), then a basis set \(\{\phi_{\mu}\}\)
+
+\item Calculate all required molecular integrals, \(S_{zmzn}\), \(H_{\mu\nu}^{\text{core}}\), and \((\mu\nu|\lambda\sigma)\)
+
+\item Diagonalize the overlap matrix \(S\) and obtain a transformation matrix \(X\) from (\ref{eq:X-mat})
+
+\item Obtain a guess at the density matrix \(P\)
+
+\item Calculate the matrix \(G\) of equation (\ref{eq:G-mat}) from the density matrix \(P\) and the two-electron integrals \((\mu\nu|\lambda\sigma)\)
+
+\item Add \(G\) to the core-Hamiltonian to obtain the Fock matrix \(F = H^{\text{core}} + G\)
+
+\item Calculate the transformed Fock matrix \(F' = X^{\dagger}FX\)
+
+\item Diagonalize \(F'\) to obtain \(C'\) and \(\epsilon\)
+
+\item Calculate \(C= X C'\)
+
+\item Form a new density matrix \(P\) from \(C\) using (\ref{eq:P-mat})
+
+\item Determine wether the procedure has converged
+\end{enumerate}
+\subsection{Integral evaluation with 1s primitive Gaussians}
+\label{sec:org0185c9f}
+\section{STO-3G basis set}
+\label{sec:org5d45c60}
+
+\begin{itemize}
+\item Slater-type functions are nice for atom orbitals
+
+\item For molecules it is preferred to use a gaussian-type function to make the integrals easier to evaluate, this provides less precision than Slater-types, but for molecules it doesn't matter
+
+\item The normalized 1s Gaussian-type function, centered at \(R_A\), has the form
+
+\[ \phi_{1s}^{GF} (\alpha, r-R_A) = (2\alpha/\pi)^{3/4} e^{-\alpha|r-R_A|^2} \]
+
+where \(\alpha\) is the gaussian orbital exponent
+\end{itemize}
+
+The two-electron integals are of the form
+
+\[ (\mu_A\nu_B|\lambda_C\sigma_D) = \int \dd{r_1}\dd{r_2} \phi_{\nu}^{A * }(r_1)\phi_{\nu}^B(r_1)r_{12}^{-1}\phi_{\lambda}^{C * }(r_2)\phi_{\sigma}^D(r_2) \]
+
+The product of two 1s Gaussian functions, each on different centers, is, apart from a constant, a 1s Gaussian function on a third center
+
+\begin{align*}
+    \phi_{1s}^{GF}(\alpha, r-R_A)\phi_{1s}^{GF}(\beta,r-R_B) = \qty(\frac{4\alpha\beta}{\pi^2})^{3/4} \text{exp}(-\alpha|r-R_A|^2 - \beta|r-R_B|^2)
+\end{align*}
+
+we can expand the exponent, with \(p=\alpha+\beta\)
+
+\begin{align*}
+    -\alpha|r-R_A|^2 - \beta|r-R_B|^2 &= -(\alpha+\beta)|r|^2 + (2\alpha R_A+2\beta R_{\beta})\cdot r - (\alpha|R_A|^2 + \beta|R_B|^2) \\
+    &= -p|r|^2 + 2pr \cdot \frac{\alpha R_A+\beta R_B}{\alpha+\beta} - p \Bigg| \frac{\alpha R_A + \beta R_B}{\alpha+\beta} \Bigg|^2 \\
+    & \qq{} + p\Bigg| \frac{\alpha R_A + \beta R_B}{\alpha+\beta} \Bigg|^2 - (\alpha |R_A|^2 + \beta |R_B|^2) \\
+    & \text{Haciendo }  R_P = (\alpha R_A + \beta R_B)/(\alpha+\beta)  \\
+    -\alpha |r-R_A|^2 - \beta|r-R_B|^2 &= (-p|r|^2 + 2pr \cdot R_P - p |R_P|^2)- \frac{\alpha\beta}{\alpha+\beta} (|R_A|^2 + |R_B|^2 - 2R_A \cdot R_B) \\
+    &= - p |r-R_P|^2 - \frac{\alpha\beta}{\alpha+\beta}|R_A-R_B|^2
+\end{align*}
+
+on the other hand
+
+\begin{align*}
+    \qty(\frac{4\alpha\beta}{\pi^2})^2 &= \qty(\frac{2\alpha\beta}{(\alpha+\beta)\pi} \frac{2(\alpha+\beta)}{\pi})^{3/4} \\
+    &= \qty(\frac{2\alpha\beta}{(\alpha+\beta)\pi})^{3/4}\qty(\frac{2p}{\pi})^{3/4}
+\end{align*}
+
+therefore
+
+\[ \phi_{1s}^{GF}(\alpha,r-R_A)\phi_{1s}^{GF}(\beta,r-R_B)=\qty(\frac{2\alpha\beta}{(\alpha+\beta)\pi})^{3/4} \qty(\frac{2p}{\pi})^{3/4} \text{exp}(-p|r-R_P|^2) \text{exp}\qty(\frac{\alpha\beta}{\alpha+\beta}|R_A-R_B|^2) \]
+
+whith
+\[ K_{AB} = \qty(\frac{2\alpha\beta}{(\alpha+\beta)\pi})^{3/4} \text{exp}\qty(-\frac{\alpha\beta}{\alpha+\beta}|R_A-R_B|^2) \]
+
+\[ \phi_{1s}^{GF}(p,r-R_P) = \qty(\frac{2p}{\pi})^{3/4} \text{exp}(-p|r-R_P|^2) \]
+
+we get
+
+\[ \phi_{1s}^{GF}(\alpha,r-R_A)\phi_{1s}^{GF}(\beta,r-R_B)= K_{AB} \phi_{1s}^{GF}(p,r-R_P) \]
+
+As a result, the four-center integral reduces, for 1s Gaussians, to the two-center integral
+
+\[ (\mu_A\nu_B|\lambda_C\sigma_D) = K_{AB}K_{CD} \int \dd{r_1}\dd{r_2} \phi_{1s}^{GF}(p,r_1-R_P)r_{12}^{-1}\phi_{1s}^{GF}(q,r_2-R_Q) \]
+
+which can be readily evaluated
+
+Since Gaussian functions are not optimum basis functions we use as a basis fixed linear combinations of the primitive Gaussian functions \(\phi_p^{GF}\). These linear combinations, called contractions, lead to contracted gaussian functions (CGF)
+
+\[ \phi_{\mu}^{CGF}(r-R_A) = \sum_{p=1}^L d_{p\mu}\phi_p^{GF}(\alpha_{p\mu, r-R_A}) \]
+
+where \(L\) is the length of the contraction and \(d_{p\mu}\) is a contraction coefficient. The pth normalized primitive Gaussian \(\phi_P^{GF}\) in the basis function \(\phi_{\mu}^{CGF}\) has a functional dependence on the Gaussian orbital exponent (contraction exponent) \(\alpha_{p\mu}\). The idea is to choose in advance the contraction length, contraction coefficients, and contraction exponents that fit the CGF to a desirable set of basis functions \(\phi_{\mu}^{CGF}\).
+
+This procedure is commonly applied to fitting a Slater-type orbital (STO) to a linear combination of \(N = 1,2,3,...\) primitive Gaussian functions, the STO-NG procedure. In particular we'll use the STO-3G basis set.
+
+First we consider fitting a Slater function having Slater exponent \(\zeta = 1\). Considering contractions up to length three so that the three fits we seek to find are
+
+\begin{align*}
+    \phi_{1s}^{CGF}(\zeta=1.0, STO-1G) &= \phi_{1s}^{GF}(\alpha_{11}) \\
+    \phi_{1s}^{CGF}(\zeta=1.0, STO-1G) &= d_{12}\phi_{1s}^{GF}(\alpha_{12}) + d_{22} \phi_{1s}^{GF}(\alpha_{22}) \\
+    \phi_{1s}^{CGF}(\zeta=1.0, STO-1G) &= d_{13}\phi_{1s}^{GF}(\alpha_{13}) + d_{23} \phi_{1s}^{GF}(\alpha_{23}) + d_{33}\phi_{1s}^{GF}(\alpha_{33})
+\end{align*}
+
+where the \(\phi_1^{CGF} (\zeta = 1.0,STO-NG)\) are the basis functions that approximate as best as possible a Slater-type function with \(\zeta = 1.0\). So we need to find the coefficients \(d_{p\mu}\) and exponents \(\alpha_{p\mu}\) that provide the best fit. The fitting criterion is one that fits the contracted Gaussian function to the Slater function in a least-squares sense, i.e., by minimizing the integral
+
+\[ I = \int \dd{r}[\phi_{1s}^{SF}(\zeta = 1.0,r) - \phi_{1s}^{CGF}(\zeta = 1.0, STO-NG,r)]^2 \]
+equivalently, since the two functions are normalized, one can maximize the overlap between the two functions, i.e., one maximizes
+
+\[ S = \int \dd{r}\phi_{1s}^{SF}(\zeta = 1.0,r) \phi_{1s}^{CGF}(\zeta = 1.0, STO-NG,r) \]
+
+For the STO-1G case, there are no contraction coefficientes, and we only need to find the primitive Gaussian exponent \(\alpha\) which maximizes the overlap
+
+\[ S = (\pi)^{-1/2} (2\alpha/\pi)^{3/4} \int \dd{r}e^{-r}e^{-\alpha r^2} \]
+
+
+DO YOUR OWN ALGORITHM TO GET YOUR OWN TABLE
+
+\begin{center}
+\begin{tabular}{rllr}
+\hline
+\(\alpha\) &  &  & S\\
+0.1 &  &  & 0.8641\\
+0.2 &  &  & 0.9673\\
+0.3 &  &  & 0.9772\\
+0.4 &  &  & 0.9606\\
+0.5 &  &  & 0.9355\\
+\hline
+\end{tabular}
+\end{center}
+
+The optimum fit occurs for \(\alpha = 0.270950\). 
+
+
+WHEN I DO MY OPTIMIZATION for the STO-2G and STO-3g cases, I should get
+
+\begin{align*}
+    \phi_{1s}^{CGF}(\zeta = 1.0, STO-1G) &= \phi_{1s}^{GF}(0.270950)\\
+    \phi_{1s}^{CGF}(\zeta = 1.0, STO-2G) &= 0.678914 \phi_{1s}^{GF}(0.151623) + 0.430129 \phi_{1s}^{GF}(0.851819)\\
+    \phi_{1s}^{CGF}(\zeta=1.0, STO-3G) &= 0.444635 \phi_{1s}^{GF}(0.109818) + 0.535328 \phi_{1s}^{GF}(0.405771) + 0.154329\phi_{1s}^{GF}(2.22766)
+\end{align*}
+\end{document}
