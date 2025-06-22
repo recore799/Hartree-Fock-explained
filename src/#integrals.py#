@@ -75,7 +75,7 @@ def compute_overlap_matrix(
     
     for mu in range(nbf):
         S[mu, mu] = 1.0  # Enforce exact normalization
-        for nu in range(mu+1,nbf):  # Upper triangle only
+        for nu in range(mu + 1, nbf):  # Upper triangle only
             R2 = np.sum((pos[mu] - pos[nu])**2)
             overlap = 0.0
             for alpha_i, d_i in primitives[mu]:
@@ -227,7 +227,8 @@ def compute_eri_tensor_sparse(primitives, pos):
                     
     return eri_dict
 
-def build_integral_arrays(primitives, pos, Z):
+def build_integral_arrays(primitives, pos, R, Z):
+    pos_old = [0.0, R]
     S = compute_overlap_matrix(primitives, pos)
     T = compute_kinetic_matrix(primitives, pos)
     V = compute_nuclear_attraction_matrix(primitives, pos, Z)

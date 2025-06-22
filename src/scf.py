@@ -2,7 +2,6 @@ import numpy as np
 from scipy.linalg import eigh, fractional_matrix_power
 from integrals import build_integral_arrays, canonical_eri_key
 from sto3g_basis import build_sto3g_basis, build_sto3g_basis_2s
-from pyscf.scf import atom_hf
 
 def scf_rhf(
         primitives: list[list[tuple[float, float]]],
@@ -11,7 +10,7 @@ def scf_rhf(
         max_iter=50, conv_tol=1e-6, verbose=1
         ) -> dict:
     """
-    Restricted Hartree-Fock SCF calculation for diatomic molecules.
+    Restricted Hartree-Fock SCF calculation.
     Args:
         primitives: list of two lists containing (alpha, coeff) pairs for each atom
         pos: np.ndarray of 3D nuclear positions
@@ -26,7 +25,7 @@ def scf_rhf(
     """
     
     # Build integral arrays
-    S, H_core, eri_dict = build_integral_arrays(primitives, pos, R, Z)
+    S, H_core, eri_dict = build_integral_arrays(primitives, pos, Z)
 
    
     # Number of basis functions and electrons
@@ -45,7 +44,7 @@ def scf_rhf(
     try:
         X = fractional_matrix_power(S, -0.5)
     except np.linalg.LinAlgError:
-        # Fallback: canonical orthogonalization
+        # If S^(-1/2) is too small, use canonical orthogonalization
         eigvals, eigvecs = eigh(S)
         X = eigvecs @ np.diag(1.0 / np.sqrt(eigvals)) @ eigvecs.T
 
@@ -124,6 +123,7 @@ def scf_rhf(
         'core_hamiltonian': H_core,
         'iterations': iteration + 1,
         'converged': rms_change < conv_tol,
+        'eri_tensor': eri_dict 
     }
     
     if verbose >= 1:
@@ -201,8 +201,18 @@ def print_final_results(results):
     for i in range(C.shape[1]):
         coeffs = "  ".join(f"{val:>8.4f}" for val in C[:, i])
         print(f"  Orbital {i+1:<2}: {coeffs}")
-    
 
+    print("S matrix:\n", results['overlap_matrix'])
+    print("P matrix:\n", results['density_matrix'])
+    print("C matrix:\n", results['orbital_coefficients'])
+    print("H matrix:\n", results['core_hamiltonian'])
+    
+    # if 'eri_tensor' in results:
+    #     print("\nUnique Electron Repulsion Integrals (ERIs):")
+    #     eri_dict = results['eri_tensor']
+    #     for key, value in eri_dict.items():
+    #         mu, nu, lam, sig = key  # Unpack the canonical key
+    #         print(f"({mu},{nu}|{lam},{sig}): {value:.6f}")
 
 # Example usage and test cases
 if __name__ == "__main__":
@@ -221,27 +231,29 @@ if __name__ == "__main__":
 
     pos_h2 = np.array([[0,0,0],[1.4,0,0]])
     Z_h2 = (1.0,1.0)
-    scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
+    # scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
     
-    print("\n2. HeH+ ion at R = 1.4 au")
+    print("\nTesting He2 at R = 5.67 Bohr")
     print("-" * 60)
 
     # For HeH+ (He: Zeta=2.095, H: Zeta=1.24)
-    sto3g_he = build_sto3g_basis(zeta=2.095)  # Helium basis
+    sto3g_he = build_sto3g_basis(zeta=1.6875)  # Helium basis
 
-    primitives_heh = [sto3g_he, sto3g_h]  # [He, H]
+    primitives_heh = [sto3g_he, sto3g_he]  # [He, H]
+
+    # print("Primitives_heh:\n", primitives_heh)
     
-    pos_heh = np.array([[0,0,0],[1.4632,0,0]])
-    Z_heh = (2.0,1.0)
-    scf_rhf(primitives_heh, pos=pos_heh, R=1.4632, Z=Z_heh, n_elec=2, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
+    pos_heh = np.array([[0,0,0],[5.67,0,0]])
+    Z_heh = (2.0,2.0)
+    scf_rhf(primitives_heh, pos=pos_heh, R=5.67, Z=Z_heh, n_elec=4, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
 
-    # print("Testing SCF implementation...")
-    # print("\n3. LiH molecule at R = 1.6 au")
-    # print("-" * 40)
+    print("Testing SCF implementation...")
+    print("\n3. LiH molecule at R = 1.6 au")
+    print("-" * 40)
  
     # primitives_lithium = [
     #     build_sto3g_basis_2s(6.3, shell="1s"),
-    #     build_sto3g_basis_2s(1.3, shell="2s"),
+    #     build_sto3g_basis_2s(1.0, shell="2s"),
     # ]
 
     # primitives_hydrogen = [
@@ -250,18 +262,58 @@ if __name__ == "__main__":
 
     # primitives_lih = primitives_lithium + primitives_hydrogen
 
-    # pos_lih = np.array([[0,0,0],[0,0,0],[3.014,0,0]])
-    # # pos = [
-    # #     np.array([0.0]),  # Li
-    # #     np.array([0.0]),  # Li again (for 2s)
-    # #     np.array([1.6]),  # H
-    # # ]
-    # Z_nuc = [3,1]
-    # R_nuc = np.array([[0.0, 0.0, 0.0], [3.014, 0.0, 0.0]])
-    # Z_lih = (3.0, 3.0, 1.0)  # match order of basis centers
-    # n_elec_lih = 4
+    Li_1s = [
+        (0.7946504870, 0.4446345422),
+        (2.936200663, 0.5353281423),
+        (16.11957475, 0.1543289673),
+        ]
 
-    # results_lih = scf_rhf(primitives_lih, pos=pos_lih, R=1.6, Z=Z_lih, n_elec=n_elec_lih, R_nuc=R_nuc, Z_nuc=Z_nuc)
+    Li_2s = [
+        (0.04808867840, 0.7001154689),
+        (0.1478600533, 0.3995128261),
+        (0.6362897469, -0.09996722919),
+        ]
+
+    H_1s = [
+        (0.109818, 0.444635),
+        (0.405771, 0.535328),
+        (2.227660, 0.154329),
+        ]
+
+
+    def norm_prim(primitives, zeta=1.0):
+
+        basis = []
+        for alpha, d in primitives:
+            alpha_scaled = alpha * (zeta ** 2)
+            norm_factor = (2.0 * alpha_scaled / np.pi) ** 0.75
+            d_scaled = d * norm_factor
+            basis.append((alpha_scaled, d_scaled))
+    
+        return basis
+
+    Li_1s_norm = norm_prim(Li_1s)
+    Li_2s_norm = norm_prim(Li_2s)
+    H_1s_norm = norm_prim(H_1s, 1.24)
+
+    primitives_lih = [Li_1s_norm, Li_2s_norm, H_1s_norm]
+    # primitives_lih = [Li_1s, Li_2s, H_1s]
+
+    pos_lih = np.array([[0,0,0],[0,0,0],[1.6,0,0]])
+    # pos = [
+    #     np.array([0.0]),  # Li
+    #     np.array([0.0]),  # Li again (for 2s)
+    #     np.array([1.6]),  # H
+    # ]
+    
+    Z_nuc = [3,1]
+    R_nuc = np.array([[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]])
+    Z_lih = (3.0, 3.0, 1.0)  # match order of basis centers
+    n_elec_lih = 4
+
+    # print("Primitives lih: ", primitives_lih)
+
+    # scf_rhf(primitives_lih, pos=pos_lih, R=1.6, Z=Z_lih, n_elec=n_elec_lih, R_nuc=R_nuc, Z_nuc=Z_nuc)
 
 
 

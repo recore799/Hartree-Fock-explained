@@ -35,7 +35,21 @@ def build_sto3g_basis_2s(zeta: float, shell: str = "1s") -> list[tuple[float, fl
         alpha = [0.536092, 0.981245, 2.240585]
     else:
         raise ValueError(f"Unsupported shell: {shell}")
-
+Li_1s = [
+    (4.35867642, 0.206812), 
+    (16.10505099, 0.093430), 
+    (88.4158254, 3.171430)
+]
+Li_2s = [
+    (0.536092, -0.119332),  # Note: Negative coefficient!
+    (0.981245, -0.160854), 
+    (2.240585, 1.143456)
+]
+H_1s = [
+    (0.3425250914, 0.154329), 
+    (0.6239137298, 0.535328), 
+    (1.2425670795, 0.444635)
+]
     basis = []
     for c, a in zip(d, alpha):
         a_scaled = a * (zeta ** 2)

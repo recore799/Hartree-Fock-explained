@@ -44,22 +44,59 @@ def heh_plus_data():
     Z_he, Z_h = 2.0, 1.0
     return primitives, pos, Z_he, Z_h
 
-H2_ref = {
-    'energy_electronic': -1.7832761512906234,
-    'energy_nuclear': 1.7142857142857144
-    'energy_total': -0.06899043700490914,
-    'G_matrix': [[-0.51039083  0.28844484],
-          [-0.52466038 -0.25695278]]
-    'S_matrix':  [[1.         0.65931901],
-           [0.65931901 1.        ]]
-}
+# H2_ref = {
+#     'energy_electronic': -1.7832761512906234,
+#     'energy_nuclear': 1.7142857142857144,
+#     'energy_total': -0.06899043700490914,
+#     'G_matrix': [[-0.51039083  0.28844484],
+#           [-0.52466038 -0.25695278]]
+#     'S_matrix':  [[1.         0.65931901],
+#            [0.65931901 1.        ]]
+# }
 
-HeHp_ref = {
-    'energy_electronic': -4.285947819745563,
-    'energy_nuclear': 2.7142857142857144
-    'energy_total': -1.5716621054598487,
-    'G_matrix':  [[-1.49096667 -0.37245117],
-           [-1.11678035 -0.25326028]]
-    'S_matrix': [[1.         0.47316108],
-          [0.47316108 1.        ]]
-}
+# HeHp_ref = {
+#     'energy_electronic': -4.285947819745563,
+#     'energy_nuclear': 2.7142857142857144,
+#     'energy_total': -1.5716621054598487,
+#     'G_matrix':  [[-1.49096667 -0.37245117],
+#            [-1.11678035 -0.25326028]]
+#     'S_matrix': [[1.         0.47316108],
+#           [0.47316108 1.        ]]
+# }
+
+
+if __name__ == "__main__":
+
+    primitives_lithium = [
+        build_sto3g_basis_2s(6.3, shell="1s"),
+        build_sto3g_basis_2s(1.0, shell="2s"),
+    ]
+
+    primitives_hydrogen = [
+        build_sto3g_basis_2s(1.0, shell="1s"),
+    ]
+
+    primitives_lih = primitives_lithium + primitives_hydrogen
+
+    pos_lih = np.array([[0,0,0],[0,0,0],[3.014,0,0]])
+    # pos = [
+    #     np.array([0.0]),  # Li
+    #     np.array([0.0]),  # Li again (for 2s)
+    #     np.array([1.6]),  # H
+    # ]
+    
+    Z_nuc = [3,1]
+    R_nuc = np.array([[0.0, 0.0, 0.0], [3.014, 0.0, 0.0]])
+    Z_lih = (3.0, 3.0, 1.0)  # match order of basis centers
+    n_elec_lih = 4
+
+
+    S, H_core, eri_dict = build_integral_arrays(primitives=primitives_lih, pos=pos_lih, Z=Z_lih)
+
+    print(S)
+
+
+
+
+
+
