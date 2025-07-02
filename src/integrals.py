@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import erf
+from src.OS import compute_eri_element
 
 
 def boys_function(t: float) -> float:

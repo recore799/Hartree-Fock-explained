@@ -917,3 +917,139 @@ HF: DIIS                            :      0.000u      0.000s      0.004w      2
 HF: Form C                          :      0.000u      0.000s      0.000w      2 calls
 
 **************************************************************************************
+
+Host: Dirac.local
+
+Timers On : Mon Jun 23 00:33:51 2025
+Timers Off: Mon Jun 23 00:33:52 2025
+
+Wall Time:        1.11 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+Libint2ERI::Libint2ERI              :      0.000u      0.000s      0.006w      1 calls
+
+--------------------------------------------------------------------------------------
+Libint2ERI::Libint2ERI              :      0.000u      0.000s      0.006w      1 calls
+
+**************************************************************************************
+
+Host: Dirac.local
+
+Timers On : Mon Jun 23 22:23:53 2025
+Timers Off: Mon Jun 23 22:23:55 2025
+
+Wall Time:        1.31 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+Total PK formation time             :      0.000u      0.000s      0.003w      1 calls
+Libint2ERI::Libint2ERI              :      0.000u      0.000s      0.001w      2 calls
+HF: Form core H                     :      0.000u      0.000s      0.001w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.000w      1 calls
+HF: Guess                           :      0.017u      0.000s      0.014w      1 calls
+SAD Guess                           :      0.017u      0.000s      0.013w      1 calls
+HF: Form G                          :      0.000u      0.017s      0.000w      7 calls
+JK: D                               :      0.000u      0.000s      0.000w      7 calls
+JK: USO2AO                          :      0.000u      0.017s      0.000w      7 calls
+JK: JK                              :      0.000u      0.000s      0.000w      7 calls
+PK computes JK                      :      0.000u      0.000s      0.000w      7 calls
+JK: AO2USO                          :      0.000u      0.000s      0.000w      7 calls
+HF: Form F                          :      0.000u      0.000s      0.000w      7 calls
+HF: Form D                          :      0.000u      0.000s      0.000w      7 calls
+HF: DIIS                            :      0.100u      0.033s      0.214w      6 calls
+HF: Form C                          :      0.000u      0.000s      0.001w      6 calls
+
+--------------------------------------------------------------------------------------
+Total PK formation time             :      0.000u      0.000s      0.003w      1 calls
+| Libint2ERI::Libint2ERI            :      0.000u      0.000s      0.001w      2 calls
+HF: Form core H                     :      0.000u      0.000s      0.001w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.000w      1 calls
+HF: Guess                           :      0.017u      0.000s      0.014w      1 calls
+| SAD Guess                         :      0.017u      0.000s      0.013w      1 calls
+HF: Form G                          :      0.000u      0.017s      0.000w      7 calls
+| JK: D                             :      0.000u      0.000s      0.000w      7 calls
+| JK: USO2AO                        :      0.000u      0.017s      0.000w      7 calls
+| JK: JK                            :      0.000u      0.000s      0.000w      7 calls
+| | PK computes JK                  :      0.000u      0.000s      0.000w      7 calls
+| JK: AO2USO                        :      0.000u      0.000s      0.000w      7 calls
+HF: Form F                          :      0.000u      0.000s      0.000w      7 calls
+HF: Form D                          :      0.000u      0.000s      0.000w      7 calls
+HF: DIIS                            :      0.100u      0.033s      0.214w      6 calls
+HF: Form C                          :      0.000u      0.000s      0.001w      6 calls
+
+**************************************************************************************
+
+Host: MacBookAir
+
+Timers On : Thu Jun 26 11:55:02 2025
+Timers Off: Thu Jun 26 11:55:06 2025
+
+Wall Time:        3.23 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+Total PK formation time             :      0.000u      0.000s      0.002w      1 calls
+Libint2ERI::Libint2ERI              :      0.000u      0.000s      0.002w      2 calls
+HF: Form core H                     :      0.000u      0.000s      0.001w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.000w      1 calls
+HF: Guess                           :      0.000u      0.000s      0.005w      1 calls
+SAD Guess                           :      0.000u      0.000s      0.005w      1 calls
+HF: Form G                          :      0.000u      0.000s      0.000w      3 calls
+JK: D                               :      0.000u      0.000s      0.000w      3 calls
+JK: USO2AO                          :      0.000u      0.000s      0.000w      3 calls
+JK: JK                              :      0.000u      0.000s      0.000w      3 calls
+PK computes JK                      :      0.000u      0.000s      0.000w      3 calls
+JK: AO2USO                          :      0.000u      0.000s      0.000w      3 calls
+HF: Form F                          :      0.000u      0.000s      0.000w      3 calls
+HF: Form D                          :      0.000u      0.000s      0.000w      3 calls
+HF: DIIS                            :      0.000u      0.017s      0.005w      2 calls
+HF: Form C                          :      0.000u      0.000s      0.000w      2 calls
+
+--------------------------------------------------------------------------------------
+Total PK formation time             :      0.000u      0.000s      0.002w      1 calls
+| Libint2ERI::Libint2ERI            :      0.000u      0.000s      0.002w      2 calls
+HF: Form core H                     :      0.000u      0.000s      0.001w      1 calls
+HF: Form S/X                        :      0.000u      0.000s      0.000w      1 calls
+HF: Guess                           :      0.000u      0.000s      0.005w      1 calls
+| SAD Guess                         :      0.000u      0.000s      0.005w      1 calls
+HF: Form G                          :      0.000u      0.000s      0.000w      3 calls
+| JK: D                             :      0.000u      0.000s      0.000w      3 calls
+| JK: USO2AO                        :      0.000u      0.000s      0.000w      3 calls
+| JK: JK                            :      0.000u      0.000s      0.000w      3 calls
+| | PK computes JK                  :      0.000u      0.000s      0.000w      3 calls
+| JK: AO2USO                        :      0.000u      0.000s      0.000w      3 calls
+HF: Form F                          :      0.000u      0.000s      0.000w      3 calls
+HF: Form D                          :      0.000u      0.000s      0.000w      3 calls
+HF: DIIS                            :      0.000u      0.017s      0.005w      2 calls
+HF: Form C                          :      0.000u      0.000s      0.000w      2 calls
+
+**************************************************************************************
+
+Host: MacBookAir
+
+Timers On : Thu Jun 26 12:07:31 2025
+Timers Off: Thu Jun 26 12:07:32 2025
+
+Wall Time:        0.94 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+
+--------------------------------------------------------------------------------------
+
+**************************************************************************************
+
+Host: MacBookAir
+
+Timers On : Thu Jun 26 12:07:41 2025
+Timers Off: Thu Jun 26 12:07:42 2025
+
+Wall Time:        0.78 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+
+--------------------------------------------------------------------------------------
+
+**************************************************************************************

@@ -187,7 +187,37 @@ The Hartree-Fock limit is when the basis set is essentially complete and Hartree
 
 ** Integral evaluation with 1s primitive Gaussians
 
+** Obara-Saika
 
+Recurrence expressions for the electron repulsion integrals over s and p Cartesian Gaussian functions
+
+- \( (ss,ss)^{(0)} = (\zeta + \eta)^{-1/2} K(\zeta_a,\zeta_b,A,B)K(\zeta_c,\Zeta_d,C,D)F_0(T) \)
+- \( (p_i s,ss)^{(0)} = (P_i - A_i)(ss,ss)^{(0)} + (W_i - P_i)(ss,ss)^{(1)} \)
+- \( (p_i s, p_k s)^{(0)} = (Q_K - C_k)(p_i s,ss)^{ (0)} + (W_k - Q_k)(p_i s, ss)^{(1)} + \frac{\delta_{ik}}{2(\zeta + \eta)}(ss,ss)^1 \)
+- \( (p_ip_j,ss)^{(0)} = (P_j-B_j)(p_i s,ss)^{(0)} + (W_j-P_j)(p_i s,ss)^{(1)} + \frac{\delta_{ij}}{2\zeta}\{ (ss,ss)^{(0)} - \frac{\rho}{\zeta}(ss,ss)^{(1)} \} \)
+- \( (p_ip_j,p_k s)^{(0)} = (Q_k - C_k)(p_ip_j,ss)^{(0)} + (W_k-Q_k)(p_ip_j,ss)^{(1)} + \frac{1}{2(\zeta + \eta)} \{ \delta_{ij}(sp_j,ss)^{(1)} + \delta_{jk}(p_i s,ss)^{(1)} \} \)
+- \( (p_i p_j, p_k p_l)^{(0)} = (Q_l - D_l)(p_ip_j, p_k s)^{(0)} + (W_l - Q_l)(p_i p_j, p_k s)^{(1)} + \frac{1}{2(\zeta+\eta)}\{ \delta_{il}(sp_j,p_k s)^{(1)} + \delta_{jl}(p_i s, p_k s)^{(1)} \} + \frac{\delta_{kl}}{2\eta}\{ (p_i p_j, ss)^{(0)} - \frac{\rho}{\eta}(p_ip_j,ss)^{(1)} \} \)
+
+The variables involved are
+
+- \( \zeta = \zeta_a + \zeta_b \)
+- \( P = \frac{\zeta_a A + \zeta_b B}{\zeta} \)
+- \( G = \frac{\zeta P + \zeta_c C}{\zeta + \zeta_c} \)
+- \( \eta = \zeta_c + \zeta_d \)
+- \( \rho = \frac{\zeta \eta}{\zeta + \eta} \)
+- \( Q = \frac{1}{\eta}(\zeta_c C + \zeta_d D) \)
+- \( W = \frac{\zeta P + \eta Q}{\zeta + \eta} \)
+- \( F_m(T) \) is the mth order Boys function
+- \( T = \rho(P-Q)^2 \)
+- \( K(\zeta,\zeta',R,R') = 2^{1/2} \frac{\pi^{5/4}}{\zeta + \zeta'} exp(- \frac{\zeta\zeta'}{\zeta+\zeta'}(R-R')^2) \) 
+
+Then the auxiliary repulsion integral \( (ab,cd)^{(m)} \) is defined by
+
+- \( (ab,cd)^{(m)} = \frac{2}{\pi^{1/2}} \int_0^{\infty} du (\frac{u^2}{\rho + u^2})^m (ab|u|cd) \)
+
+  where the integral in \( u \) is introduced by the integral representation of the \( r_{12}^{-1} \) operator in \( (ab,cd) \) and in particular, the true ERI is \( (ab,cd)^{(0)} \)
+  
+  
 
 * STO-3G basis set
 

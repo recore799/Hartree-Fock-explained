@@ -207,12 +207,12 @@ def print_final_results(results):
     print("C matrix:\n", results['orbital_coefficients'])
     print("H matrix:\n", results['core_hamiltonian'])
     
-    # if 'eri_tensor' in results:
-    #     print("\nUnique Electron Repulsion Integrals (ERIs):")
-    #     eri_dict = results['eri_tensor']
-    #     for key, value in eri_dict.items():
-    #         mu, nu, lam, sig = key  # Unpack the canonical key
-    #         print(f"({mu},{nu}|{lam},{sig}): {value:.6f}")
+    if 'eri_tensor' in results:
+        print("\nUnique Electron Repulsion Integrals (ERIs):")
+        eri_dict = results['eri_tensor']
+        for key, value in eri_dict.items():
+            mu, nu, lam, sig = key  # Unpack the canonical key
+            print(f"({mu},{nu}|{lam},{sig}): {value:.6f}")
 
 # Example usage and test cases
 if __name__ == "__main__":
@@ -224,14 +224,14 @@ if __name__ == "__main__":
     print("-" * 60)
  
     # For H2 (H: Zeta=1.24)
-    sto3g_h = build_sto3g_basis(zeta=1.24)    # Hydrogen basis
+    sto3g_h = build_sto3g_basis(zeta=1.0)    # Hydrogen basis
 
     primitives_h2 = [sto3g_h, sto3g_h]  # [He, H]
     
 
     pos_h2 = np.array([[0,0,0],[1.4,0,0]])
     Z_h2 = (1.0,1.0)
-    # scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
+    scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1)
     
     print("\nTesting He2 at R = 5.67 Bohr")
     print("-" * 60)
@@ -245,7 +245,7 @@ if __name__ == "__main__":
     
     pos_heh = np.array([[0,0,0],[5.67,0,0]])
     Z_heh = (2.0,2.0)
-    scf_rhf(primitives_heh, pos=pos_heh, R=5.67, Z=Z_heh, n_elec=4, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
+    # scf_rhf(primitives_heh, pos=pos_heh, R=5.67, Z=Z_heh, n_elec=4, R_nuc=pos_heh, Z_nuc=Z_heh, verbose=1)
 
     print("Testing SCF implementation...")
     print("\n3. LiH molecule at R = 1.6 au")
