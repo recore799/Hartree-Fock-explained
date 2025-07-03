@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import erf
-from src.OS import compute_eri_element
+# from src.OS import compute_eri_element
 
 
 def boys_function(t: float) -> float:
@@ -282,4 +282,7 @@ if __name__ == "__main__":
     eri_sparse = compute_eri_tensor_sparse(primitives, pos)
 
     compare_eris_dense_sparse(eri_dense, eri_sparse)
+
+
+
 

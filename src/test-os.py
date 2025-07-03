@@ -1,5 +1,5 @@
 import numpy as np
-from OS import compute_eri_element
+from OS import compute_eri_tensor_sparse
 
 # STO-3G parameters for Hydrogen (ζ=1.24)
 slater_exponent = 1.24
@@ -37,12 +37,11 @@ H2 = BasisFunction([
 basis_set = {0: H1, 1: H2}
 
 # Compute (11|11) ERI
-eri_0000 = compute_eri_element(0, 0, 0, 0, basis_set)
+eri = compute_eri_tensor_sparse(basis_set)
 
-# Check symmetry: (11|11) should equal itself (trivial, but tests indexing)
-# assert np.isclose(eri_1111, compute_eri_element(1, 1, 1, 1, basis_set))
+print(eri)
 
-expected_eri_0000 = 0.7746  # Szabo/Ostlund value for H2 in STO-3G
-print(f"Computed (00|00): {eri_0000:.4f}")
-print(f"Expected (00|00): {expected_eri_0000:.4f}")
-print(f"Error: {abs(eri_0000 - expected_eri_0000):.4e}")
+# expected_eri_0000 = 0.7746  # Szabo/Ostlund value for H2 in STO-3G
+# print(f"Computed (00|00): {eri_0000:.4f}")
+# print(f"Expected (00|00): {expected_eri_0000:.4f}")
+# print(f"Error: {abs(eri_0000 - expected_eri_0000):.4e}")

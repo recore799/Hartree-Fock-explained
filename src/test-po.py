@@ -1,7 +1,6 @@
 import numpy as np
-from OS import compute_eri_element
+from OS import compute_eri_tensor_sparse
 
-# STO-3G parameters for Hydrogen (ζ=1.24)
 slater_exponent = 1.24
 H_STO3G_params = [
     (0.109818, 0.444635),  # (unscaled exponent, coefficient)
@@ -31,7 +30,7 @@ class BasisFunction:
 center_A = [0.0, 0.0, 0.0]
 center_B = [1.0, 0.0, 0.0]
 
-primitive_params =  H_STO3G_params # arbitrary but reasonable
+primitive_params =  H_STO3G_primitives # zeta=1.24
 
 px_A = BasisFunction([
     (primitive_params[0][0], primitive_params[0][1], center_A, (1, 0, 0)),
@@ -41,9 +40,9 @@ px_A = BasisFunction([
 
 
 px_B = BasisFunction([
-    (primitive_params[0][0], primitive_params[0][1], center_A, (1, 0, 0)),
-    (primitive_params[1][0], primitive_params[1][1], center_A, (1, 0, 0)),
-    (primitive_params[2][0], primitive_params[2][1], center_A, (1, 0, 0)),
+    (primitive_params[0][0], primitive_params[0][1], center_B, (1, 0, 0)),
+    (primitive_params[1][0], primitive_params[1][1], center_B, (1, 0, 0)),
+    (primitive_params[2][0], primitive_params[2][1], center_B, (1, 0, 0)),
 ])
 
 
@@ -54,6 +53,10 @@ basis_set = {
 }
 
 
-eri_pxpx = compute_eri_element(0, 0, 1, 1, basis_set)
+# eri_pxpx = compute_eri_element(0, 0, 0, 0, basis_set)
 
-print("(px px | px px) =", eri_pxpx)
+# print("(px px | px px) =", eri_pxpx)
+
+eri = compute_eri_tensor_sparse(basis_set)
+
+print(eri)

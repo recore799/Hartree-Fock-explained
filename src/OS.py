@@ -2,6 +2,7 @@ import numpy as np
 from math import prod, sqrt, pi, exp
 from collections import defaultdict
 from scipy.special import erf
+from collections import defaultdict
 
 # ---- Symmetry utilities (ERIs) ----
 def pack_index(mu, nu):
@@ -76,6 +77,7 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     # Gaussian product theorem
     zeta = zeta_a + zeta_b
     eta = zeta_c + zeta_d
+    xi = (zeta_a*zeta_b) / (zeta_a + zeta_b)
     P = (zeta_a*A + zeta_b*B) / zeta
     Q = (zeta_c*C + zeta_d*D) / eta
     W = (zeta*P + eta*Q) / (zeta+eta)
@@ -107,7 +109,7 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     return {
         'a_ang': (la, ma, na), 'b_ang': (lb, mb, nb),
         'c_ang': (lc, mc, nc), 'd_ang': (ld, md, nd),
-        'zeta': zeta, 'eta': eta, 'rho': rho, 'A': A, 'B': B, 'C': C, 'D': D,
+        'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D,
         'ssss_coeff': ssss_coeff,
         'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RW_P': RW_P, 'RW_Q': RW_Q,
         'F': F, 'T': T
@@ -537,7 +539,6 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
 
     eri = 0.0
 
-    i = 0
     for a_prim in ci.primitives:
         for b_prim in cj.primitives:
             for c_prim in ck.primitives:
@@ -564,9 +565,6 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
                         (zeta_d, center_d, ang_d)
                     )
 
-                    # print(f"{i}-th params: {params}")
-                    # i += 1
-
                     # Compute primitive ERI using OS recursion
                     val_tensor = dp_primitive_eri(params)
 
@@ -577,16 +575,6 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
                     ld, md, nd = ang_d
 
                     val = val_tensor[0][la, ma, na, lb, mb, nb, lc, mc, nc, ld, md, nd]
-                    print("Accessing ERI element at indices:", (la,ma,na,lb,mb,nb,lc,mc,nc,ld,md,nd))
-                    print("value: ", val)
-
-                    print("I[0] nonzero entries:", np.count_nonzero(val_tensor[0]))
-
-                    print("I[0][0]: ", val_tensor[0][0,0,0, 0,0,0, 0,0,0, 0,0,0])
-                    print("I[1][0]: ", val_tensor[1][0,0,0, 0,0,0, 0,0,0, 0,0,0])
-                    print("I[2][0]: ", val_tensor[2][0,0,0, 0,0,0, 0,0,0, 0,0,0])
-                    print("I[3][0]: ", val_tensor[3][0,0,0, 0,0,0, 0,0,0, 0,0,0])
-
 
                     # Accumulate total ERI with weights and normalization
                     total_weight = coeff_a * coeff_b * coeff_c * coeff_d
@@ -594,3 +582,420 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
 
     return eri
 
+
+def compute_eri_tensor_sparse(basis_set):
+    """
+    Compute sparse ERI tensor using Obara–Saika and packed index canonical keys.
+    Args:
+        basis_set (dict[int -> BasisFunction])
+    Returns:
+        eri_dict (defaultdict[tuple[int, int], float])
+    """
+    nbf = len(basis_set)
+    eri_dict = defaultdict(float)
+    computed_keys = set()
+
+    for mu in range(nbf):
+        for nu in range(nbf):
+            for lam in range(nbf):
+                for sig in range(nbf):
+                    key = get_canonical_key(mu, nu, lam, sig)
+                    if key in computed_keys:
+                        continue
+                    computed_keys.add(key)
+
+                    val = compute_eri_element(mu, nu, lam, sig, basis_set)
+                    eri_dict[key] = val
+
+    return eri_dict
+
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+def set_ss(I, val):
+    I[0,0,0, 0,0,0] = val
+def ret_ss(I):
+    return I[0,0,0, 0,0,0]
+
+
+def set_ps(I, i, val):
+    I[1 if i==0 else 0,
+      1 if i==1 else 0,
+      1 if i==2 else 0,
+      0,0,0] = val
+def ret_ps(I, i):
+    return I[1 if i==0 else 0,
+             1 if i==1 else 0,
+             1 if i==2 else 0,
+             0,0,0]
+
+def set_sp(I, j, val):
+    I[0,0,0,
+      1 if j==0 else 0,
+      1 if j==1 else 0,
+      1 if j==2 else 0] = val
+def ret_sp(I, j):
+    return I[0,0,0,
+             1 if j==0 else 0,
+             1 if j==1 else 0,
+             1 if j==2 else 0]
+
+def set_pp(I, i, j, val):
+    I[1 if i==0 else 0,
+      1 if i==1 else 0,
+      1 if i==2 else 0,
+      1 if j==0 else 0,
+      1 if j==1 else 0,
+      1 if j==2 else 0] = val
+    
+def ret_pp(I, i, j):
+    return I[1 if i==0 else 0,
+             1 if i==1 else 0,
+             1 if i==2 else 0,
+             1 if j==0 else 0,
+             1 if j==1 else 0,
+             1 if j==2 else 0]
+    
+def build_ps(I, RP_A):
+    for i in range(3):
+        val = RP_A[i] * ret_ss(I)
+        set_ps(I, i, val)
+
+def build_sp(I, RP_B):
+    for j in range(3):
+        val = RP_B[j] * ret_ss(I)
+        set_sp(I, j, val)
+
+def build_pp(I, zeta, RP_B):
+    for i in range(3):
+        for j in range(3):
+            val = RP_B[j] * ret_ps(I, i) + delta(i,j) / (2*zeta) * ret_ss(I)
+            set_pp(I, i, j, val)
+
+    
+    
+def dp_primitive_overlap(params):
+    """
+    Compute 1-electron overlap integrals using Obara–Saika recursion.
+    Returns: I[3][3] where indices: [0] = s, [1] = px, [2] = py, [3] = pz
+    """
+    A = params['A']
+    B = params['B']
+    RP_A = params['RP_A']
+    RP_B = params['RP_B']
+    zeta = params['zeta']
+    xi = params['xi']
+
+    I = np.zeros((2,)*6)
+
+    # Base case (s|s)
+    RAB2 = np.dot(A-B, A-B)
+    val = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
+    set_ss(I, val)
+
+    # (p|s) and (s|p)
+    build_ps(I, RP_A)
+    build_sp(I, RP_B)
+    # (p|p)
+    build_pp(I, zeta, RP_B)
+
+    return I
+
+def compute_overlap_element(mu, nu, basis_set):
+    """
+    Compute the overlap integral S_{μν} using OS recursion.
+    """
+    ci = basis_set[mu]
+    cj = basis_set[nu]
+    S = 0.0
+
+    for a_prim in ci.primitives:
+        for b_prim in cj.primitives:
+            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
+            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
+
+            norm = (
+                gaussian_norm(zeta_a, ang_a) *
+                gaussian_norm(zeta_b, ang_b)
+            )
+
+            params = compute_primitive_parameters(
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b),
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b)
+            )
+
+            val_smat = dp_primitive_overlap(params)
+
+            la, ma, na = ang_a
+            lb, mb, nb = ang_b
+
+            # index shift: (s=0) → 0, (p=1) → 1, etc.
+            val = val_smat[la, ma, na, lb, mb, nb]
+            total_weight = coeff_a * coeff_b
+            S += total_weight * val * norm
+
+    return S
+
+def compute_overlap_matrix(basis_set):
+    nbf = len(basis_set)
+    S = np.zeros((nbf, nbf))
+
+    for mu in range(nbf):
+        for nu in range(mu + 1):  # exploit symmetry
+            val = compute_overlap_element(mu, nu, basis_set)
+            S[mu, nu] = S[nu, mu] = val
+
+    return S
+
+
+# ——————————————————————————————————————————————
+# 1) Primitive‐level kernels
+# ——————————————————————————————————————————————
+
+def build_psT(I, I2, xi, RP_A):
+    for i in range(3):
+        ss = ret_ss(I2)
+        val = RP_A[i] * ret_ss(I) + 2*xi*ss
+        set_ps(I, i, val)
+
+def build_spT(I, I2, xi, RP_B):
+    for j in range(3):
+        ss = ret_ss(I2)
+        val = RP_B[j] * ret_ss(I) + 2*xi*ss
+        set_ps(I, j, val)
+
+def build_ppT(I, I2, zeta, xi, RP_B):
+    for i in range(3):
+        for j in range(3):
+            pp = ret_pp(I2, i, j)
+            val = RP_B[j] * ret_pp(I, i, j) + delta(i, j) / (2*zeta) * ret_ss(I) + 2*xi*pp
+            set_pp(I, i, j, val)
+
+        
+
+def dp_primitive_kinetic(params):
+    """
+    Obara–Saika vertical recursion for kinetic integrals:
+      ⟨μ| -½∇² |ν⟩
+    Assumes set_ssT, set_psT, set_spT, set_ppT are defined,
+    as are ret_ss, ret_ps, etc., and delta(i,j).
+    """
+    # Unpack what you need
+    A, B      = params['A'], params['B']
+    RP_A, RP_B= params['RP_A'], params['RP_B']
+    zeta       = params['zeta']
+    xi         = params['rho']
+    # 2×2×2×2… tensor of shape (2,2,2,2,2,2) for s/p on μ and s/p on ν
+    I1 = np.zeros((2,)*6)
+    I2 = np.zeros((2,)*6)
+
+    # Base (s|T|s) kinetic:
+    # FIX: uses explicit (s||s), resuse from S matrix instead
+    RAB2 = np.dot(A - B, A - B)
+
+    valS = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
+    set_ss(I2, valS)
+
+
+    for i in range(3):
+        val = RP_A[i] * ret_ss(I2)
+        set_ps(I2, i, val)
+
+    for j in range(3):
+        val = RP_B[j] * ret_ss(I2)
+        set_sp(I2, j, val)
+
+    for i in range(3):
+        for j in range(3):
+            val = RP_B[j] * ret_ps(I2, i) + delta(i,j) / (2*zeta) * ret_ss(I2)
+            set_pp(I2, i, j, val)
+
+
+    valT = xi * (3 - 2*xi*RAB2) * ret_ss(I2)
+    set_ss(I1, valT)
+
+    build_psT(I1, I2, xi, RP_A)
+    build_spT(I1, I2, xi, RP_B)
+    build_ppT(I1, I2, zeta, xi, RP_B)
+    
+    return I1
+
+
+def dp_primitive_nuclear(params, Cn, Zn):
+    """
+    Obara–Saika vertical recursion for nuclear‐attraction to nucleus at Cn with charge Zn:
+      ⟨μ| -Z/|r-Cn| |ν⟩
+    Assumes set_ssV, set_psV, set_spV, set_ppV are defined.
+    """
+    A, B      = params['A'], params['B']
+    RP_A, RP_B= params['RP_A'], params['RP_B']
+    zeta       = params['zeta']
+    rho        = params['rho']
+    RPQ        = params['P'] - Cn   # P from compute_primitive_parameters
+    T          = rho * np.dot(RPQ, RPQ)
+
+    # compute Boys F[0], F[1] from params['F']
+    F = params['F']
+
+    I = np.zeros((2,)*6)
+
+    # Base (s|s) nuclear:
+    # Vss = -Z * 2π/ζ * F₀(T)
+    Vss = -Zn * 2*np.pi/zeta * F[0]
+    set_ssV(I, Vss)
+
+    # (p|s) and (s|p)
+    for i in range(3):
+        set_psV(I, i, RP_A[i]*Vss - Zn*(2*np.pi/zeta)*RPQ[i]*F[1])
+        set_spV(I, i, RP_B[i]*Vss - Zn*(2*np.pi/zeta)*RPQ[i]*F[1])
+
+    # (p|p)
+    for i in range(3):
+        for j in range(3):
+            # Mixed-term and delta-term from OS formula
+            term1 = RP_B[j]*ret_psV(I,i)
+            term2 = -Zn*(2*np.pi/zeta)*(RPQ[j]*ret_psssV(I,i) + RPQ[i]*ret_spsV(I,j))
+            term3 = delta(i,j)*(-Zn*(2*np.pi/zeta))*(F[0] - (rho/zeta)*F[1])
+            set_ppV(I, i, j, term1 + term2 + term3)
+
+    return I
+
+# ——————————————————————————————————————————————
+# 2) Contracted‐element builders
+# ——————————————————————————————————————————————
+def compute_kinetic_element(mu, nu, basis_set):
+    """
+    Compute the overlap integral S_{μν} using OS recursion.
+    """
+    ci = basis_set[mu]
+    cj = basis_set[nu]
+    T = 0.0
+
+    for a_prim in ci.primitives:
+        for b_prim in cj.primitives:
+            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
+            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
+
+            norm = (
+                gaussian_norm(zeta_a, ang_a) *
+                gaussian_norm(zeta_b, ang_b)
+            )
+
+            params = compute_primitive_parameters(
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b),
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b)
+            )
+
+            val_tmat = dp_primitive_kinetic(params)
+
+            la, ma, na = ang_a
+            lb, mb, nb = ang_b
+
+            val = val_tmat[la, ma, na, lb, mb, nb]
+            total_weight = coeff_a * coeff_b
+            T += total_weight * val * norm
+
+    return T
+
+
+def compute_kinetic_element_old(mu, nu, basis_set):
+    ci, cj = basis_set[mu], basis_set[nu]
+    Tij = 0.0
+    for a in ci.primitives:
+      for b in cj.primitives:
+        zeta_a, ca, Ra, ang_a = a.zeta, a.coeff, a.center, a.angmom
+        zeta_b, cb, Rb, ang_b = b.zeta, b.coeff, b.center, b.angmom
+        norm = gaussian_norm(zeta_a, ang_a) * gaussian_norm(zeta_b, ang_b)
+
+        params = compute_primitive_parameters(
+          (zeta_a, Ra, ang_a),
+          (zeta_b, Rb, ang_b),
+          (zeta_a, Ra, ang_a),  # dummy C
+          (zeta_b, Rb, ang_b)   # dummy D
+        )
+
+        I = dp_primitive_kinetic(params)
+
+        la, ma, na = ang_a
+        lb, mb, nb = ang_b
+
+        val = I[la, ma, na, lb, mb, nb]
+        Tij += ca * cb * norm * val
+    return Tij
+
+
+def compute_nuclear_element(mu, nu, basis_set, nuclei):
+    """
+    Sum over each nucleus:
+     V_{μν} = Σ_A ⟨μ| -Z_A/|r−R_A| |ν⟩
+    """
+    ci, cj = basis_set[mu], basis_set[nu]
+    Vmn = 0.0
+    for a in ci.primitives:
+      for b in cj.primitives:
+        zeta_a, ca, Ra, la = a.zeta, a.coeff, a.center, a.angmom
+        zeta_b, cb, Rb, lb = b.zeta, b.coeff, b.center, b.angmom
+        norm = gaussian_norm(zeta_a, la) * gaussian_norm(zeta_b, lb)
+
+        for (Zn, Rn) in nuclei:
+            params = compute_primitive_parameters(
+              (zeta_a, Ra, la),
+              (zeta_b, Rb, lb),
+              (zeta_a, Ra, la),  # dummy C
+              (zeta_b, Rb, lb)   # dummy D
+            )
+            # attach P in params for nuclear recursion
+            I = dp_primitive_nuclear(params, Rn, Zn)
+
+            i,j = la[0]+lb[0], la[1]+lb[1]
+            val = I[i,j,0,0,0,0]
+            Vmn += ca * cb * norm * val
+
+    return Vmn
+
+# ——————————————————————————————————————————————
+# 3) Full‐matrix builders
+# ——————————————————————————————————————————————
+def compute_kinetic_matrix(basis_set):
+    nbf = len(basis_set)
+    T = np.zeros((nbf, nbf))
+
+    for mu in range(nbf):
+        for nu in range(mu + 1):  # exploit symmetry
+            val = compute_kinetic_element(mu, nu, basis_set)
+            T[mu, nu] = T[nu, mu] = val
+
+    return T
+
+
+def compute_kinetic_matrix_old(basis_set):
+    nbf = len(basis_set)
+    T = np.zeros((nbf, nbf))
+    for mu in range(nbf):
+        for nu in range(mu+1):
+            val = compute_kinetic_element(mu, nu, basis_set)
+            T[mu, nu] = T[nu, mu] = val
+    return T
+
+def compute_nuclear_matrix(basis_set, nuclei):
+    nbf = len(basis_set)
+    V = np.zeros((nbf, nbf))
+    for mu in range(nbf):
+        for nu in range(mu+1):
+            val = compute_nuclear_element(mu, nu, basis_set, nuclei)
+            V[mu, nu] = V[nu, mu] = val
+    return V
+
+# ——————————————————————————————————————————————
+# 4) Core Hamiltonian
+# ——————————————————————————————————————————————
+
+def compute_hcore(basis_set, nuclei):
+    T = compute_kinetic_matrix(basis_set)
+    V = compute_nuclear_matrix(basis_set, nuclei)
+    return T + V
