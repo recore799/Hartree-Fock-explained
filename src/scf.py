@@ -2,12 +2,13 @@ import numpy as np
 from scipy.linalg import eigh, fractional_matrix_power
 from integrals import build_integral_arrays, canonical_eri_key
 from sto3g_basis import build_sto3g_basis, build_sto3g_basis_2s
-from OS import compute_eri_tensor_sparse, compute_overlap_matrix, compute_kinetic_matrix
+from OS import compute_eri_tensor_sparse, compute_overlap_matrix, compute_hcore
 
 def scf_rhf(
-        primitives: list[list[tuple[float, float]]],
-        pos: np.ndarray, R: float, Z: tuple, n_elec: int,
-        R_nuc: np.ndarray, Z_nuc: list, basis_set,
+        # primitives: list[list[tuple[float, float]]],
+        # pos: np.ndarray, R: float, Z: tuple, n_elec: int,
+        n_elec, 
+        R_nuc: np.ndarray, Z_nuc: list, basis_set, nuclei,
         max_iter=50, conv_tol=1e-6, verbose=1
         ) -> dict:
     """
@@ -26,11 +27,10 @@ def scf_rhf(
     """
     
     # Build integral arrays
-    S_mat, H_core, test = build_integral_arrays(primitives, pos, Z)
+    # S_mat, H, test = build_integral_arrays(primitives, pos, Z)
     eri_dict = compute_eri_tensor_sparse(basis_set)
     S = compute_overlap_matrix(basis_set)
-    T1 = compute_kinetic_matrix(basis_set)
-    print("T mat1:\n", T1)
+    T, V, H_core = compute_hcore(basis_set, nuclei)
 
    
     # Number of basis functions and electrons
@@ -41,7 +41,7 @@ def scf_rhf(
         print(f"Number of basis functions: {nbf}")
         print(f"Number of electrons: {n_elec}")
         print(f"Number of occupied orbitals: {n_occ}")
-        print(f"Bond distance: {R:.3f} au")
+        # print(f"Bond distance: {R:.3f} au")
         # print("-" * 50)
     
     # Symmetric orthogonalization: X = S^(-1/2)
@@ -66,11 +66,8 @@ def scf_rhf(
         
         # Calculate electronic energy
         E_elec = np.sum(P * H_core) + 0.5 * np.sum(P * (F - H_core)) # More numerically stable       
-
         # Nuclear repulsion energy (generalized for polyatomics)
-        E_nuc = sum(Z_nuc[i]*Z_nuc[j] / np.linalg.norm(R_nuc[i]-R_nuc[j])
-                    for i in range(len(Z_nuc))
-                    for j in range(i+1, len(Z_nuc)))
+        E_nuc = compute_nuclear_repulsion_energy(Z_nuc, R_nuc)
 
         E_total = E_elec + E_nuc
         
@@ -128,13 +125,17 @@ def scf_rhf(
         'core_hamiltonian': H_core,
         'iterations': iteration + 1,
         'converged': rms_change < conv_tol,
-        'eri_tensor': eri_dict 
+        'eri_tensor': eri_dict,
+        'T' : T,
+        'V' : V
     }
     
     if verbose >= 1:
         print_final_results(results)
     
     return
+
+
 
 def get_initial_guess(S: np.ndarray, Z_list: list) -> np.ndarray:
     """Guess based on atomic charges"""
@@ -147,6 +148,16 @@ def get_initial_guess(S: np.ndarray, Z_list: list) -> np.ndarray:
     P[2,2] = 1.0  # H 1s
     
     return P
+
+def compute_nuclear_repulsion_energy(Z_nuc, R_nuc):
+    E_nuc = 0.0
+    for i in range(len(Z_nuc)):
+        for j in range(i + 1, len(Z_nuc)):
+            Rij = np.linalg.norm(np.array(R_nuc[i]) - np.array(R_nuc[j]))
+            if Rij > 1e-12:
+                E_nuc += Z_nuc[i] * Z_nuc[j] / Rij
+    return E_nuc
+
 
 def build_fock_matrix(H_core: np.ndarray, P: np.ndarray, eri: np.ndarray) -> np.ndarray:
     """
@@ -244,10 +255,16 @@ def print_final_results(results):
         print(f"  Orbital {i+1:<2}: {coeffs}")
 
     print("S matrix:\n", results['overlap_matrix'])
+    print("T matrix:\n", results['T'])
+    print("V matrix:\n", results['V'])
     print("P matrix:\n", results['density_matrix'])
     print("C matrix:\n", results['orbital_coefficients'])
     print("H matrix:\n", results['core_hamiltonian'])
-    
+
+    eri = results['eri_tensor']
+    eri_size = len(eri)
+
+    print("ERI tensor shape:\n", eri_size)
     # if 'eri_tensor' in results:
     #     print("\nUnique Electron Repulsion Integrals (ERIs):")
     #     eri_dict = results['eri_tensor']
@@ -307,9 +324,13 @@ if __name__ == "__main__":
     ])
 
     basis_set = {0: H1, 1: H2}
+    nuclei = [
+        (1.0, [0.0, 0.0, 0.0]),
+        (1.0, [1.4, 0.0, 0.0])
+    ]
 
 
-    scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1, basis_set=basis_set)
+    scf_rhf(primitives_h2, pos=pos_h2, R=1.4, Z=Z_h2, n_elec=2, R_nuc=pos_h2, Z_nuc=Z_h2, verbose=1, basis_set=basis_set, nuclei=nuclei)
 
 
 

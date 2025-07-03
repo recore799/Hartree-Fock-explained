@@ -109,7 +109,7 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     return {
         'a_ang': (la, ma, na), 'b_ang': (lb, mb, nb),
         'c_ang': (lc, mc, nc), 'd_ang': (ld, md, nd),
-        'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D,
+        'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D, 'P': P,
         'ssss_coeff': ssss_coeff,
         'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RW_P': RW_P, 'RW_Q': RW_Q,
         'F': F, 'T': T
@@ -787,7 +787,7 @@ def dp_primitive_kinetic(params):
     A, B      = params['A'], params['B']
     RP_A, RP_B= params['RP_A'], params['RP_B']
     zeta       = params['zeta']
-    xi         = params['rho']
+    xi         = params['xi']
     # 2×2×2×2… tensor of shape (2,2,2,2,2,2) for s/p on μ and s/p on ν
     I1 = np.zeros((2,)*6)
     I2 = np.zeros((2,)*6)
@@ -823,45 +823,82 @@ def dp_primitive_kinetic(params):
     
     return I1
 
+def set_ssm(I,m, val):
+    I[m][0,0,0, 0,0,0] = val
+def ret_ssm(I,m):
+    return I[m][0,0,0, 0,0,0]
 
-def dp_primitive_nuclear(params, Cn, Zn):
+
+def set_psm(I,m, i, val):
+    I[m][1 if i==0 else 0,
+         1 if i==1 else 0,
+         1 if i==2 else 0,
+         0,0,0] = val
+def ret_psm(I,m, i):
+    return I[m][1 if i==0 else 0,
+                1 if i==1 else 0,
+                1 if i==2 else 0,
+                0,0,0]
+
+def set_ppm(I,m, i, j, val):
+    I[m][1 if i==0 else 0,
+         1 if i==1 else 0,
+         1 if i==2 else 0,
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0] = val
+    
+def ret_ppm(I,m, i, j):
+    return I[m][1 if i==0 else 0,
+                1 if i==1 else 0,
+                1 if i==2 else 0,
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0]
+ 
+def build_psV(I, RP_A, RP_C):
+    for m in range(2):
+        for i in range(3):
+            val = RP_A[i] * ret_ssm(I, m) - RP_C[i] * ret_ssm(I, m+1)
+            set_psm(I, m, i, val)
+
+def build_ppV(I, zeta, RP_B, RP_C):
+    for i in range(3):
+        for j in range(3):
+            RP_B[j] * ret_psm(I, 0, i) - RP_C[j] * ret_psm(I, 1, i) + delta(i,j) / (2*zeta) * (ret_ssm(I, 0) - ret_ssm(I, 1))
+
+def dp_primitive_nuclear(params):
     """
     Obara–Saika vertical recursion for nuclear‐attraction to nucleus at Cn with charge Zn:
       ⟨μ| -Z/|r-Cn| |ν⟩
-    Assumes set_ssV, set_psV, set_spV, set_ppV are defined.
     """
-    A, B      = params['A'], params['B']
-    RP_A, RP_B= params['RP_A'], params['RP_B']
+    A, B, P    = params['A'], params['B'], params['P']
+    RP_A, RP_B = params['RP_A'], params['RP_B']
     zeta       = params['zeta']
-    rho        = params['rho']
-    RPQ        = params['P'] - Cn   # P from compute_primitive_parameters
-    T          = rho * np.dot(RPQ, RPQ)
+    xi        = params['xi']
+    C, Z_C   = params['R_C'], params['Z_C']
+    RP_C = P - C
+    
+    U          = zeta * np.dot(P-C, P-C)
 
-    # compute Boys F[0], F[1] from params['F']
-    F = params['F']
+    F = boys_sequence(10, U)
 
-    I = np.zeros((2,)*6)
+    max_m = 2
+    I1 = [np.zeros((2,)*6) for _ in range(max_m + 1)]
 
-    # Base (s|s) nuclear:
-    # Vss = -Z * 2π/ζ * F₀(T)
-    Vss = -Zn * 2*np.pi/zeta * F[0]
-    set_ssV(I, Vss)
 
-    # (p|s) and (s|p)
-    for i in range(3):
-        set_psV(I, i, RP_A[i]*Vss - Zn*(2*np.pi/zeta)*RPQ[i]*F[1])
-        set_spV(I, i, RP_B[i]*Vss - Zn*(2*np.pi/zeta)*RPQ[i]*F[1])
+    RAB2 = np.dot(A-B, A-B)
+    valS = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
 
-    # (p|p)
-    for i in range(3):
-        for j in range(3):
-            # Mixed-term and delta-term from OS formula
-            term1 = RP_B[j]*ret_psV(I,i)
-            term2 = -Zn*(2*np.pi/zeta)*(RPQ[j]*ret_psssV(I,i) + RPQ[i]*ret_spsV(I,j))
-            term3 = delta(i,j)*(-Zn*(2*np.pi/zeta))*(F[0] - (rho/zeta)*F[1])
-            set_ppV(I, i, j, term1 + term2 + term3)
+    # Base (s|A0|s) nuclear:
+    for m in range(3):
+        val = 2 * (zeta / pi)**(0.5) * valS * F[m]
+        set_ssm(I1,m, val)
 
-    return I
+    build_psV(I1, RP_A, RP_C)
+    build_ppV(I1, zeta, RP_B, RP_C)
+
+    return I1
 
 # ——————————————————————————————————————————————
 # 2) Contracted‐element builders
@@ -903,60 +940,52 @@ def compute_kinetic_element(mu, nu, basis_set):
     return T
 
 
-def compute_kinetic_element_old(mu, nu, basis_set):
-    ci, cj = basis_set[mu], basis_set[nu]
-    Tij = 0.0
-    for a in ci.primitives:
-      for b in cj.primitives:
-        zeta_a, ca, Ra, ang_a = a.zeta, a.coeff, a.center, a.angmom
-        zeta_b, cb, Rb, ang_b = b.zeta, b.coeff, b.center, b.angmom
-        norm = gaussian_norm(zeta_a, ang_a) * gaussian_norm(zeta_b, ang_b)
-
-        params = compute_primitive_parameters(
-          (zeta_a, Ra, ang_a),
-          (zeta_b, Rb, ang_b),
-          (zeta_a, Ra, ang_a),  # dummy C
-          (zeta_b, Rb, ang_b)   # dummy D
-        )
-
-        I = dp_primitive_kinetic(params)
-
-        la, ma, na = ang_a
-        lb, mb, nb = ang_b
-
-        val = I[la, ma, na, lb, mb, nb]
-        Tij += ca * cb * norm * val
-    return Tij
-
-
 def compute_nuclear_element(mu, nu, basis_set, nuclei):
-    """
-    Sum over each nucleus:
-     V_{μν} = Σ_A ⟨μ| -Z_A/|r−R_A| |ν⟩
-    """
-    ci, cj = basis_set[mu], basis_set[nu]
-    Vmn = 0.0
-    for a in ci.primitives:
-      for b in cj.primitives:
-        zeta_a, ca, Ra, la = a.zeta, a.coeff, a.center, a.angmom
-        zeta_b, cb, Rb, lb = b.zeta, b.coeff, b.center, b.angmom
-        norm = gaussian_norm(zeta_a, la) * gaussian_norm(zeta_b, lb)
+    ci = basis_set[mu]
+    cj = basis_set[nu]
+    V = 0.0
 
-        for (Zn, Rn) in nuclei:
-            params = compute_primitive_parameters(
-              (zeta_a, Ra, la),
-              (zeta_b, Rb, lb),
-              (zeta_a, Ra, la),  # dummy C
-              (zeta_b, Rb, lb)   # dummy D
+    for a_prim in ci.primitives:
+        for b_prim in cj.primitives:
+            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
+            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
+
+            norm = (
+                gaussian_norm(zeta_a, ang_a) *
+                gaussian_norm(zeta_b, ang_b)
             )
-            # attach P in params for nuclear recursion
-            I = dp_primitive_nuclear(params, Rn, Zn)
 
-            i,j = la[0]+lb[0], la[1]+lb[1]
-            val = I[i,j,0,0,0,0]
-            Vmn += ca * cb * norm * val
+            for Z_A, R_A in nuclei:
+                params = compute_primitive_parameters(
+                    (zeta_a, center_a, ang_a),
+                    (zeta_b, center_b, ang_b),
+                    (zeta_a, center_a, ang_a),
+                    (zeta_b, center_b, ang_b)
+                )
 
-    return Vmn
+                # Add nuclear center
+                params["R_C"] = np.array(R_A)
+                params["Z_C"] = Z_A
+                A = params['A']
+                B = params['B']
+
+                val_tensor = dp_primitive_nuclear(params)
+
+                la, ma, na = ang_a
+                lb, mb, nb = ang_b
+
+                val = val_tensor[0][la, ma, na, lb, mb, nb]
+                total_weight = coeff_a * coeff_b * norm
+                if np.isnan(val) or np.isinf(val) or abs(val) > 1e+3:
+                    val = 0.0
+
+                V += -Z_A * total_weight * val
+                print(f"mu={mu}, nu={nu}, V[mu,nu] = {val}, A = {A}, B = {B}, R_C = {R_A}")
+
+
+
+    return V
+
 
 # ——————————————————————————————————————————————
 # 3) Full‐matrix builders
@@ -985,10 +1014,12 @@ def compute_kinetic_matrix_old(basis_set):
 def compute_nuclear_matrix(basis_set, nuclei):
     nbf = len(basis_set)
     V = np.zeros((nbf, nbf))
+
     for mu in range(nbf):
-        for nu in range(mu+1):
+        for nu in range(mu + 1):
             val = compute_nuclear_element(mu, nu, basis_set, nuclei)
             V[mu, nu] = V[nu, mu] = val
+
     return V
 
 # ——————————————————————————————————————————————
@@ -998,4 +1029,4 @@ def compute_nuclear_matrix(basis_set, nuclei):
 def compute_hcore(basis_set, nuclei):
     T = compute_kinetic_matrix(basis_set)
     V = compute_nuclear_matrix(basis_set, nuclei)
-    return T + V
+    return T, V, T + V
