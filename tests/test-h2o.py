@@ -1,6 +1,7 @@
 import numpy as np
-from scf import scf_rhf
 import time
+
+from src.scf.rhf_os import scf_rhf
 
 # Oxygen at origin
 O_pos = [0.000000, 0.000000, 0.000000]

@@ -3,11 +3,10 @@ from math import prod, sqrt, pi, exp
 from collections import defaultdict
 from scipy.special import erf
 
-#Import boys function from https://github.com/peter-reinholdt/pyboys
-from ..pyboys.boys import boys
+from pyboys.boys import boys
 
 
-# ---- Symmetry utilities (ERIs) ----
+# Symmetry utilities (ERIs)
 def pack_index(mu, nu):
     # Pack two indices into one unique key (assuming mu >= nu)
     return mu * (mu + 1) // 2 + nu
@@ -19,13 +18,12 @@ def get_canonical_key(mu, nu, lam, sig):
     # Order the two pairs to enforce (munu >= lamsig)
     return (munu, lamsig) if munu >= lamsig else (lamsig, munu)
 
+# Math functions
 def double_factorial(n: int) -> int:
     """Compute double factorial n!! = n*(n-2)*(n-4)*...*1 (or 2)"""
     if n < 0:
         return 1
     return prod(range(n, 0, -2))
-
-
 
 def boys_sequence(max_m: int, T: float) -> np.ndarray:
     F = np.zeros(max_m + 1)
@@ -35,7 +33,7 @@ def boys_sequence(max_m: int, T: float) -> np.ndarray:
     return F
 
 
-
+# Primitive subroutines
 def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     """
     Given four primitives, return a dict with all deterministic parameters:
