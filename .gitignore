@@ -1,1 +1,39 @@
-*.pyc\n__pycache__/\n.env/\nvenv/
+# Emacs
+*~
+\#*\#
+.\#*
+*.elc
+*.swp
+*.lock
+*autosave*
+ltximg/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.pyo
+
+# Output
+*.out
+*.log
+*.aux
+*.toc
+*.pdf
+*.png
+*.npy
+*.npz
+
+# Testing
+.pytest_cache/
+.cache/
+*.coverage
+coverage.xml
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store

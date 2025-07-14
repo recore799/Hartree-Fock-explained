@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import erf
-# from src.OS import compute_eri_element
+from collections import defaultdict
 
 
 def boys_function(t: float) -> float:
@@ -133,46 +133,6 @@ def compute_nuclear_attraction_matrix(
                         V[mu,nu] += d_i * d_j * nuclear_attraction_primitive(
                             alpha_i, alpha_j, R_mu_nu, R_pc, Z_i)
     return V
-
-def compute_eri_tensor(
-        primitives: list[list[tuple[float, float]]],
-        pos: list[float]) -> np.ndarray: #still uses 1d pos list
-    nbf = len(primitives)
-    eri = np.zeros((nbf, nbf, nbf, nbf))
-    for mu in range(nbf):
-        for nu in range(nbf):
-            for lam in range(nbf):
-                for sig in range(nbf):
-                    for alpha_i, d_i in primitives[mu]:
-                        for alpha_j, d_j in primitives[nu]:
-                            for alpha_k, d_k in primitives[lam]:
-                                for alpha_l, d_l in primitives[sig]:
-                                    p = alpha_i + alpha_j
-                                    q = alpha_k + alpha_l
-                                    P_pos = (alpha_i*pos[mu] + alpha_j*pos[nu]) / p
-                                    Q_pos = (alpha_k*pos[lam] + alpha_l*pos[sig]) / q
-                                    R_mu_nu = abs(pos[mu] - pos[nu])
-                                    R_lam_sig = abs(pos[lam] - pos[sig])
-                                    R_pq = abs(P_pos - Q_pos)
-                                    eri[mu, nu, lam, sig] += (
-                                        d_i * d_j * d_k * d_l *
-                                        eri_primitive(alpha_i, alpha_j,
-                                                      alpha_k, alpha_l,
-                                                      R_mu_nu, R_lam_sig, R_pq)
-                                    )
-    # Symmetrize
-    eri = (eri + eri.transpose(1,0,2,3)
-               + eri.transpose(0,1,3,2)
-               + eri.transpose(1,0,3,2)
-               + eri.transpose(2,3,0,1)
-               + eri.transpose(3,2,0,1)
-               + eri.transpose(2,3,1,0)
-               + eri.transpose(3,2,1,0)) / 8.0
-    return eri
-
-
-
-from collections import defaultdict
 
 def canonical_eri_key(mu, nu, lam, sig):
     """Create canonical representation preserving pair symmetry"""

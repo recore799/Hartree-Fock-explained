@@ -68,10 +68,28 @@ Orbital Coefficients (C):
 ```
 
 
-### Como correr los cálculos
-```text
-python src/scf.py
+### Como correr los ejemplos
+
+1. Clonar el repositorio
+
+```bash
+git clone https://github.com/recore799/Hartree-Fock-explained.git
+cd Hartree-Fock-explained
 ```
+
+2. Usar el script run.sh desde el root del repositorio para correr uno de los ejemplos
+
+```bash
+chmod +x run.sh                # Hacer ejecutable al script (solo Linux/Mac)
+./run.sh tests/test-rhfs.py    # Correr un test
+
+./run.sh example/h2o.py        # Correr un ejemplo
+```
+
+3. Dependencias:
+   - Numpy
+   - Scipy
+
 
 ## Extensiones
 

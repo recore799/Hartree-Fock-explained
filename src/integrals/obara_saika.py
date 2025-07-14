@@ -2,7 +2,10 @@ import numpy as np
 from math import prod, sqrt, pi, exp
 from collections import defaultdict
 from scipy.special import erf
-from collections import defaultdict
+
+#Import boys function from https://github.com/peter-reinholdt/pyboys
+from ..pyboys.boys import boys
+
 
 # ---- Symmetry utilities (ERIs) ----
 def pack_index(mu, nu):
@@ -23,45 +26,14 @@ def double_factorial(n: int) -> int:
     return prod(range(n, 0, -2))
 
 
+
 def boys_sequence(max_m: int, T: float) -> np.ndarray:
-    """
-    Compute Boys function F_0(T) to F_{max_m}(T) using stable downward recursion.
-    
-    Args:
-        max_m: Maximum order needed (returns F[0]...F[max_m])
-        T: Argument to Boys function
-    
-    Returns:
-        Array of F[0], F[1], ..., F[max_m]
-    """
-    if T < 1e-15:  # Taylor series for small T
-        return np.array([1/(2*m + 1) - T/(2*m + 3) for m in range(max_m + 1)])
-    
-    # Initialize array with F[0] to F[max_m]
     F = np.zeros(max_m + 1)
-    
-    # Base case for F[0]
-    sqrt_T = sqrt(T)
-    F[0] = sqrt(pi)/2 * erf(sqrt_T)/sqrt_T if T > 0 else 1.0
-    
-    if max_m == 0:
-        return F
-    
-    # Estimate needed starting point (empirically optimized)
-    n_start = max_m + int(10 + 2*T)  # Reduced safety margin
-    
-    # Temporary storage for downward recursion
-    F_temp = np.zeros(n_start + 2)
-    F_temp[n_start + 1] = 1/(2*(n_start + 1) + 1)  # Approximate F[n_start+1]
-    
-    # Downward recursion to fill F_temp
-    for m in range(n_start, -1, -1):
-        F_temp[m] = (2*T*F_temp[m + 1] + exp(-T))/(2*m + 1)
-    
-    # Copy required values (F[0] is already set)
-    F[1:max_m + 1] = F_temp[1:max_m + 1]
-    
+    for m in range(max_m+1):
+        F[m] = boys(m, T)
+        
     return F
+
 
 
 def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
@@ -881,9 +853,8 @@ def dp_primitive_nuclear(params):
     
     U          = zeta * np.dot(P-C, P-C)
 
-    F = boys_sequence(10, U)
-
     max_m = 2
+    F = boys_sequence(max_m, U)
     I1 = [np.zeros((2,)*6) for _ in range(max_m + 1)]
 
 
@@ -976,11 +947,11 @@ def compute_nuclear_element(mu, nu, basis_set, nuclei):
 
                 val = val_tensor[0][la, ma, na, lb, mb, nb]
                 total_weight = coeff_a * coeff_b * norm
-                if np.isnan(val) or np.isinf(val) or abs(val) > 1e+3:
+                if np.isnan(val) or np.isinf(val) or abs(val) > 100:
+                    print(f"mu={mu}, nu={nu}, V[mu,nu] = {val}, A = {A}, B = {B}, R_C = {R_A}")
                     val = 0.0
 
                 V += -Z_A * total_weight * val
-                print(f"mu={mu}, nu={nu}, V[mu,nu] = {val}, A = {A}, B = {B}, R_C = {R_A}")
 
 
 
