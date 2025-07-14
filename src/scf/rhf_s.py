@@ -7,7 +7,7 @@ from src.integrals.s_integrals import build_integral_arrays, canonical_eri_key
 def scf_rhf(
         primitives: list[list[tuple[float, float]]],
         pos: np.ndarray, R: float, Z: tuple, n_elec: int,
-        R_nuc: np.ndarray, Z_nuc: list,
+        R_nuc: np.ndarray, Z_nuc: list, molecule,
         max_iter=50, conv_tol=1e-6, verbose=1
         ) -> dict:
     """
@@ -124,7 +124,8 @@ def scf_rhf(
         'core_hamiltonian': H_core,
         'iterations': iteration + 1,
         'converged': rms_change < conv_tol,
-        'eri_tensor': eri_dict
+        'eri_tensor': eri_dict,
+        'molecule': molecule
     }
     
     if verbose >= 1:
@@ -163,7 +164,7 @@ def build_fock_matrix_sparse(H_core: np.ndarray, P: np.ndarray, eri_dict: dict) 
 def print_final_results(results):
     """Print formatted final SCF results"""
     print("\n" + "="*60)
-    print("FINAL SCF H₂O RESULTS")
+    print(f"FINAL SCF {results['molecule']} RESULTS")
     print("="*60)
 
     print(f"{'Electronic energy:':<25}{results['energy_electronic']:>12.6f}  Ha")
