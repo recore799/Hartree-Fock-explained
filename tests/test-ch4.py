@@ -1,5 +1,5 @@
 import numpy as np
-from scf import scf_rhf
+from src.scf.rhf_os import scf_rhf
 import time
 
 class Primitive:
