@@ -35,56 +35,12 @@ def boys_sequence(max_m: int, T: float) -> np.ndarray:
 # Kronecker delta
 def delta(i, j): return 1.0 if i == j else 0.0
 
-def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
-    """
-    Given four primitives, return a dict with all deterministic parameters:
-    """
-
-    zeta_a, A, (la,ma,na) = a_prim
-    zeta_b, B, (lb,mb,nb) = b_prim
-    zeta_c, C, (lc,mc,nc) = c_prim
-    zeta_d, D, (ld,md,nd) = d_prim
-
-    # Gaussian product theorem
-    zeta = zeta_a + zeta_b
-    eta = zeta_c + zeta_d
-    xi = (zeta_a*zeta_b) / (zeta_a + zeta_b)
-    P = (zeta_a*A + zeta_b*B) / zeta
-    Q = (zeta_c*C + zeta_d*D) / eta
-    W = (zeta*P + eta*Q) / (zeta+eta)
-    rho = zeta * eta / (zeta + eta)
-    RPQ = P-Q
-    T = rho * np.dot(RPQ, RPQ)
-
-    # Boys function up to max needed order
-    max_m = la + lb + lc + ld + ma + mb + mc + md + na + nb + nc + nd
-    F = boys_sequence(max_m+10, T)
-
-    # Compute K prefactor for (00|00)
-    def K_func(zeta,zeta_p,R,R_p):
-        RRp = R - R_p
-        return 2**0.5 * (pi**(5/4)) / (zeta + zeta_p) * np.exp( - (zeta*zeta_p * np.dot(RRp, RRp)) / (zeta + zeta_p) )
-
-
-    # Prefactors and vectors for recurrences
-    ssss_coeff = K_func(zeta_a, zeta_b, A, B) * K_func(zeta_c, zeta_d, C, D) / sqrt(zeta+eta)
-
-    RP_A = P-A
-    RP_B = P-B
-    RQ_C = Q-C
-    RQ_D = Q-D
-    RW_P = W-P
-    RW_Q = W-Q
-
-
-    return {
-        'a_ang': (la, ma, na), 'b_ang': (lb, mb, nb),
-        'c_ang': (lc, mc, nc), 'd_ang': (ld, md, nd),
-        'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D, 'P': P,
-        'ssss_coeff': ssss_coeff,
-        'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RW_P': RW_P, 'RW_Q': RW_Q,
-        'F': F, 'T': T
-        }
+def gaussian_norm(zeta: float, angmom: tuple[int,int,int]) -> float:
+    """Compute normalization constant for a primitive Gaussian."""
+    l, m, n = angmom
+    prefactor = (2*zeta/np.pi)**0.75 * (4*zeta)**((l+m+n)/2)
+    dfactor = np.sqrt(double_factorial(2*l-1) * double_factorial(2*m-1) * double_factorial(2*n-1))
+    return prefactor * dfactor
 
 # I tensor utilities
 # set_ sets val to I[m][i] tensor element
@@ -110,39 +66,63 @@ def ret_psss(I,m,i):
                 0,0,0, 0,0,0, 0,0,0]
 # (sp|ss)^(m)
 def set_spss(I,m,j, val):
-    I[m][1 if j==0 else 0,
+    I[m][0,0,0,
+         1 if j==0 else 0,
          1 if j==1 else 0,
          1 if j==2 else 0,
-         0,0,0, 0,0,0, 0,0,0] = val
+         0,0,0, 0,0,0] = val
 def ret_spss(I,m,j):
-    return I[m][1 if j==0 else 0,
+    return I[m][0,0,0,
+                1 if j==0 else 0,
                 1 if j==1 else 0,
                 1 if j==2 else 0,
-                0,0,0, 0,0,0, 0,0,0]
+                0,0,0, 0,0,0]
 
 # (ss|ps)^(m)
 def set_ssps(I,m,k, val):
-    I[m][1 if k==0 else 0,
+    I[m][0,0,0, 0,0,0,
+         1 if k==0 else 0,
          1 if k==1 else 0,
          1 if k==2 else 0,
-         0,0,0, 0,0,0, 0,0,0] = val
+         0,0,0] = val
 def ret_ssps(I,m,k):
-    return I[m][1 if k==0 else 0,
+    return I[m][0,0,0, 0,0,0,
+                1 if k==0 else 0,
                 1 if k==1 else 0,
                 1 if k==2 else 0,
-                0,0,0, 0,0,0, 0,0,0]
+                0,0,0]
 
 # (ss|sp)^(m)
 def set_sssp(I,m,l, val):
-    I[m][1 if l==0 else 0,
+    I[m][0,0,0, 0,0,0, 0,0,0,
+         1 if l==0 else 0,
          1 if l==1 else 0,
-         1 if l==2 else 0,
-         0,0,0, 0,0,0, 0,0,0] = val
+         1 if l==2 else 0] = val
 def ret_sssp(I,m,l):
-    return I[m][1 if l==0 else 0,
+    return I[m][0,0,0, 0,0,0, 0,0,0,
+                1 if l==0 else 0,
                 1 if l==1 else 0,
-                1 if l==2 else 0,
-                0,0,0, 0,0,0, 0,0,0]
+                1 if l==2 else 0]
+
+# (pp|ss)^(m)
+def set_ppss(I,m,i,j, val):
+    I[m][1 if i==0 else 0,
+         1 if i==1 else 0,
+         1 if i==2 else 0,
+
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0,
+         0,0,0, 0,0,0] = val
+def ret_ppss(I,m,i,j):
+    return I[m][1 if i==0 else 0,
+                1 if i==1 else 0,
+                1 if i==2 else 0,
+
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0,
+                0,0,0, 0,0,0]
 
 # (ps|ps)^(m)
 def set_psps(I,m,i,k, val):
@@ -159,26 +139,6 @@ def ret_psps(I,m,i,k):
                 1 if i==1 else 0,
                 1 if i==2 else 0,
                 0,0,0,
-                1 if k==0 else 0,
-                1 if k==1 else 0,
-                1 if k==2 else 0,
-                0,0,0]
-
-# (sp|ps)^(m)
-def set_spps(I,m,j,k, val):
-    I[m][0,0,0,
-         1 if j==0 else 0,
-         1 if j==1 else 0,
-         1 if j==2 else 0,
-         1 if k==0 else 0,
-         1 if k==1 else 0,
-         1 if k==2 else 0,
-         0,0,0] = val
-def ret_spps(I,m,j,k):
-    return I[m][0,0,0,
-                1 if j==0 else 0,
-                1 if j==1 else 0,
-                1 if j==2 else 0,
                 1 if k==0 else 0,
                 1 if k==1 else 0,
                 1 if k==2 else 0,
@@ -204,41 +164,67 @@ def ret_pssp(I,m,i,l):
                 1 if l==1 else 0,
                 1 if l==2 else 0]
 
+# (sp|ps)^(m)
+def set_spps(I,m,j,k, val):
+    I[m][0,0,0,
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0,
+
+         1 if k==0 else 0,
+         1 if k==1 else 0,
+         1 if k==2 else 0,
+         0,0,0] = val
+def ret_spps(I,m,j,k):
+    return I[m][0,0,0,
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0,
+
+                1 if k==0 else 0,
+                1 if k==1 else 0,
+                1 if k==2 else 0,
+                0,0,0]
+
+# (sp|sp)^(m)
+def set_spsp(I,m,j,l, val):
+    I[m][0,0,0,
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0,
+         0,0,0,
+         1 if l==0 else 0,
+         1 if l==1 else 0,
+         1 if l==2 else 0] = val
+def ret_spsp(I,m,j,l):
+    return I[m][0,0,0,
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0,
+                0,0,0,
+                1 if l==0 else 0,
+                1 if l==1 else 0,
+                1 if l==2 else 0]
+
 # (ss|pp)^(m)
-def set_psps(I,m,k,l, val):
+def set_sspp(I,m,k,l, val):
     I[m][0,0,0, 0,0,0,
          1 if k==0 else 0,
          1 if k==1 else 0,
          1 if k==2 else 0,
+
          1 if l==0 else 0,
          1 if l==1 else 0,
          1 if l==2 else 0] = val
 def ret_sspp(I,m,k,l):
     return I[m][0,0,0, 0,0,0,
-         1 if k==0 else 0,
-         1 if k==1 else 0,
-         1 if k==2 else 0,
-         1 if l==0 else 0,
-         1 if l==1 else 0,
-         1 if l==2 else 0]
+                1 if k==0 else 0,
+                1 if k==1 else 0,
+                1 if k==2 else 0,
 
-# (pp|ss)^(m)
-def set_ppss(I,m,i,j, val):
-    I[m][1 if i==0 else 0,
-         1 if i==1 else 0,
-         1 if i==2 else 0,
-         1 if j==0 else 0,
-         1 if j==1 else 0,
-         1 if j==2 else 0,
-         0,0,0, 0,0,0] = val
-def ret_ppss(I,m,i,j):
-    return I[m][1 if i==0 else 0,
-                1 if i==1 else 0,
-                1 if i==2 else 0,
-                1 if j==0 else 0,
-                1 if j==1 else 0,
-                1 if j==2 else 0,
-                0,0,0, 0,0,0]
+                1 if l==0 else 0,
+                1 if l==1 else 0,
+                1 if l==2 else 0]
 
 # (pp|ps)^(m)
 def set_ppps(I,m,i,j,k, val):
@@ -263,6 +249,86 @@ def ret_ppps(I,m,i,j,k):
                 1 if k==1 else 0,
                 1 if k==2 else 0,
                 0,0,0]
+
+# (pp|sp)^(m)
+def set_ppsp(I,m,i,j,l, val):
+    I[m][1 if i==0 else 0,
+         1 if i==1 else 0,
+         1 if i==2 else 0,
+         
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0,
+         0,0,0,
+         1 if l==0 else 0,
+         1 if l==1 else 0,
+         1 if l==2 else 0] = val
+def ret_ppsp(I,m,i,j,l):
+    return I[m][1 if i==0 else 0,
+                1 if i==1 else 0,
+                1 if i==2 else 0,
+                
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0,
+                0,0,0,
+                1 if l==0 else 0,
+                1 if l==1 else 0,
+                1 if l==2 else 0]
+
+# (ps|pp)^(m)
+def set_pspp(I,m,i,k,l, val):
+    I[m][1 if i==0 else 0,
+         1 if i==1 else 0,
+         1 if i==2 else 0,
+         0,0,0,
+         1 if k==0 else 0,
+         1 if k==1 else 0,
+         1 if k==2 else 0,
+
+         1 if l==0 else 0,
+         1 if l==1 else 0,
+         1 if l==2 else 0] = val
+def ret_pspp(I,m,i,k,l):
+    return I[m][1 if i==0 else 0,
+                1 if i==1 else 0,
+                1 if i==2 else 0,
+                0,0,0,
+                1 if k==0 else 0,
+                1 if k==1 else 0,
+                1 if k==2 else 0,
+                
+                1 if l==0 else 0,
+                1 if l==1 else 0,
+                1 if l==2 else 0]
+
+# (sp|pp)^(m)
+def set_sppp(I,m,j,k,l, val):
+    I[m][0,0,0,
+         1 if j==0 else 0,
+         1 if j==1 else 0,
+         1 if j==2 else 0,
+
+         1 if k==0 else 0,
+         1 if k==1 else 0,
+         1 if k==2 else 0,
+
+         1 if l==0 else 0,
+         1 if l==1 else 0,
+         1 if l==2 else 0] = val
+def ret_sppp(I,m,j,k,l):
+    return I[m][0,0,0,
+                1 if j==0 else 0,
+                1 if j==1 else 0,
+                1 if j==2 else 0,
+
+                1 if k==0 else 0,
+                1 if k==1 else 0,
+                1 if k==2 else 0,
+                
+                1 if l==0 else 0,
+                1 if l==1 else 0,
+                1 if l==2 else 0]
 
 # (pp|pp)^(m)
 def set_pppp(I,m,i,j,k,l, val):
@@ -339,53 +405,64 @@ def ret_pp(I,m, i, j):
                 1 if j==1 else 0,
                 1 if j==2 else 0]
  
-# Recursion builders
-
-# Overlap Matrix
-# Overlap recursion builders
-def build_ps(I, RP_A):
+# === Recursion builders ===
+def build_ps(I_s, I_t, xi, RP_A):
     for i in range(3):
-        val = RP_A[i] * ret_ss(I,0)
-        set_ps(I, 0, i, val)
-def build_sp(I, RP_B):
-    for j in range(3):
-        val = RP_B[j] * ret_ss(I, 0)
-        set_sp(I, 0, j, val)
-def build_pp(I, zeta, RP_B):
-    for i in range(3):
-        for j in range(3):
-            val = RP_B[j] * ret_ps(I, 0, i) + delta(i,j) / (2*zeta) * ret_ss(I, 0)
-            set_pp(I, 0, i, j, val)
-
-# Kinetic matrix
-def build_psT(I, I2, xi, RP_A):
-    for i in range(3):
-        ss = ret_ss(I2,0)
-        val = RP_A[i] * ret_ss(I,0) + 2*xi*ss
-        set_ps(I,0, i, val)
-def build_spT(I, I2, xi, RP_B):
-    for j in range(3):
-        ss = ret_ss(I2,0)
-        val = RP_B[j] * ret_ss(I,0) + 2*xi*ss
-        set_ps(I,0, j, val)
-def build_ppT(I, I2, zeta, xi, RP_B):
-    for i in range(3):
-        for j in range(3):
-            pp = ret_pp(I2,0, i, j)
-            val = RP_B[j] * ret_pp(I,0, i, j) + delta(i, j) / (2*zeta) * ret_ss(I,0) + 2*xi*pp
-            set_pp(I,0, i, j, val)
-
-# Nuclear attraction matrix
-def build_psV(I, RP_A, RP_C):
+        # Overlap
+        vals = RP_A[i] * ret_ss(I_s,0)
+        set_ps(I_s, 0, i, vals)
+        # Kinetic
+        valt = RP_A[i] * ret_ss(I_t, 0) + 2 * xi * vals
+        set_ps(I_t, 0, i, valt)
+def build_psv(I_v, RP_A, RP_C):
     for m in range(2):
         for i in range(3):
-            val = RP_A[i] * ret_ss(I, m) - RP_C[i] * ret_ss(I, m+1)
-            set_ps(I, m, i, val)
-def build_ppV(I, zeta, RP_B, RP_C):
+            # Nuclear
+            valv = RP_A[i] * ret_ss(I_v, m) - RP_C[i] * ret_ss(I_v, m+1)
+            set_ps(I_v, m, i, valv)
+
+def build_sp(I_s, I_t, xi, RP_B):
+    for j in range(3):
+        # Overlap
+        vals = RP_B[j] * ret_ss(I_s,0)
+        set_sp(I_s, 0, j, vals)
+        # Kinetic
+        valt = RP_B[j] * ret_ss(I_t, 0) + 2 * xi * vals
+        set_sp(I_t, 0, j, valt)
+
+def build_sp_print(I_s, I_t, xi, RP_B):
+    for j in range(3):
+        # Overlap
+        vals = RP_B[j] * ret_ss(I_s,0)
+        set_sp(I_s, 0, j, vals)
+        # Kinetic
+        valt = RP_B[j] * ret_ss(I_t, 0) + 2 * xi * vals
+        set_sp(I_t, 0, j, valt)
+        print("Val_S: ", vals)
+        print("Val_T: ", valt)
+
+def build_spv(I_v, RP_B, RP_C):
+    for m in range(2):
+        for j in range(3):
+             # Nuclear
+            valv = RP_B[j] * ret_ss(I_v, m) - RP_C[j] * ret_ss(I_v, m+1)
+            set_sp(I_v, m, j, valv)
+   
+def build_pp(I_s, I_t, xi, zeta, RP_B):
     for i in range(3):
         for j in range(3):
-            RP_B[j] * ret_ps(I, 0, i) - RP_C[j] * ret_ps(I, 1, i) + delta(i,j) / (2*zeta) * (ret_ss(I, 0) - ret_ss(I, 1))
-
+            # Overlap
+            vals = RP_B[j] * ret_ps(I_s, 0, i) + delta(i,j) / (2*zeta) * ret_ss(I_s, 0)
+            set_pp(I_s, 0, i, j, vals)
+            # Kinetic
+            valt = RP_B[j] * ret_ps(I_t, 0, i) + delta(i, j) / (2*zeta) * ret_ss(I_t, 0) + 2 * xi * vals
+            set_pp(I_t, 0, i, j, valt)
+def build_ppv(I_v, zeta, RP_B, RP_C):
+    for i in range(3):
+        for j in range(3):
+            # Nuclear
+            valv = RP_B[j] * ret_ps(I_v, 0, i) - RP_C[j] * ret_ps(I_v, 0, i) + delta(i, j) / (2*zeta) * (ret_ss(I_v, 0) - ret_ss(I_v, 1))
+            set_pp(I_v, 0, i, j, valv)
 
 
 # ERI tensor
@@ -422,8 +499,17 @@ def build_sssp(I, RQ_D, RW_Q, max_m):
             )
             set_sssp(I,m,l, val)
 
+def build_ppss(I, RP_B, RW_P, rho, zeta, max_m):
+    for m in range(max_m-1):
+        for i in range(3):
+            for j in range(3):
+                val = (
+                    RP_B[j] * ret_psss(I,m,i) +
+                    RW_P[j] * ret_psss(I,m+1,i) +
+                    (delta(i,j)/(2*zeta)) * (ret_ssss(I,m) - (rho/zeta) * ret_ssss(I,m+1))
+                )
+                set_ppss(I,m,i,j, val)
 
-            
 def build_psps(I, RQ_C, RW_Q, zeta, eta, max_m):
     for m in range(max_m-1):
         for i in range(3):
@@ -434,17 +520,6 @@ def build_psps(I, RQ_C, RW_Q, zeta, eta, max_m):
                     (delta(i,k) / (2*(zeta+eta))) * ret_ssss(I,m+1)
                 )
                 set_psps(I,m,i,k, val) 
-
-def build_spps(I, RQ_C, RW_Q, zeta, eta, max_m):
-    for m in range(max_m - 1):
-        for j in range(3):  # B center (second)
-            for k in range(3):  # C center (third)
-                val = (
-                    RQ_C[k] * ret_spss(I,m,j) +
-                    RW_Q[k] * ret_spss(I,m+1,j) +
-                    delta(j,k)/(2*(zeta + eta)) * ret_ssss(I,m+1)
-                )
-                set_spps(I,m,j,k, val)
 
 def build_pssp(I, RQ_D, RW_Q, zeta, eta, max_m):
     for m in range(max_m - 1):
@@ -457,6 +532,28 @@ def build_pssp(I, RQ_D, RW_Q, zeta, eta, max_m):
                 )
                 set_pssp(I,m,i,l, val)
 
+def build_spps(I, RQ_C, RW_Q, zeta, eta, max_m):
+    for m in range(max_m - 1):
+        for j in range(3):  # B center (second)
+            for k in range(3):  # C center (third)
+                val = (
+                    RQ_C[k] * ret_spss(I,m,j) +
+                    RW_Q[k] * ret_spss(I,m+1,j) +
+                    delta(j,k)/(2*(zeta + eta)) * ret_ssss(I,m+1)
+                )
+                set_spps(I,m,j,k, val)
+
+def build_spsp(I, RQ_D, RW_Q, zeta, eta, max_m):
+    for m in range(max_m-1):
+        for j in range(3):
+            for l in range(3):
+                val = (
+                    RQ_D[l] * ret_spss(I,m,j) +
+                    RW_Q[l] * ret_spss(I,m+1,j) +
+                    (delta(j,l) / (2*(zeta+eta))) * ret_ssss(I,m+1)
+                )
+                set_spsp(I, m, j, l, val)
+
 def build_sspp(I, RQ_D, RW_Q, rho, eta, max_m):
     for m in range(max_m - 1):
         for k in range(3):  # C center (third)
@@ -464,22 +561,9 @@ def build_sspp(I, RQ_D, RW_Q, rho, eta, max_m):
                 val = (
                     RQ_D[l] * ret_ssps(I,m,k) +
                     RW_Q[l] * ret_ssps(I,m+1,k) +
-                    delta(k,l)/(2*eta) * (
-                        ret_ssss(I,m) - (rho/eta) * ret_ssss(I,m+1)
-                    )
+                    delta(k,l)/(2*eta) * (ret_ssss(I,m) - (rho/eta) * ret_ssss(I,m+1))
                 )
                 set_sspp(I,m,k,l, val)
-
-def build_ppss(I, RP_B, RW_P, rho, zeta, max_m):
-    for m in range(max_m-1):
-        for i in range(3):
-            for j in range(3):
-                val = (
-                    RP_B[j] * ret_psss(I,m,i) +
-                    RW_P[j] * ret_psss(I,m+1,i) +
-                    (delta(i,j)/(2*zeta)) * ( ret_ssss(I,m) - (rho/zeta) * ret_ssss(I,m+1))
-                )
-                set_ppss(I,m,i,j, val)
 
 def build_ppps(I, RQ_C, RW_Q, zeta, eta, max_m):
     for m in range(max_m-2):
@@ -494,9 +578,46 @@ def build_ppps(I, RQ_C, RW_Q, zeta, eta, max_m):
                         RQ_C[k] * ret_ppss(I,m,i,j) +
                         RW_Q[k] * ret_ppss(I,m+1,i,j) +
                         (delta(i,k) * ret_spss(I,m+1,j) +
-                         delta(j,k) * ret_psss(I,m+1,i) / (2*(zeta+eta)))
+                         delta(j,k) * ret_psss(I,m+1,i)) / (2*(zeta+eta))
                     )
                     set_ppps(I,m,i,j,k, val)
+
+def build_ppsp(I, RQ_D, RW_Q, zeta, eta, max_m):
+    for m in range(max_m-2):
+        for i in range(3):
+            for j in range(3):
+                for l in range(3):
+                    val = (
+                        RQ_D[l] * ret_ppss(I,m,i,j) +
+                        RW_Q[l] * ret_ppss(I,m+1,i,j) +
+                        (delta(i,l) * ret_spss(I,m+1,j) +
+                         delta(j,l) * ret_psss(I,m+1,i)) / (2*(zeta+eta))
+                    )
+                    set_ppsp(I, m, i, j, l, val)
+
+def build_pspp(I, RP_A, RW_P, zeta, eta, max_m):
+    for m in range(max_m-2):
+        for i in range(3):
+            for k in range(3):
+                for l in range(3):
+                    val = (
+                        RP_A[i] * ret_sspp(I, m, k, l) +
+                        RW_P[i] * ret_sspp(I, m+1, k, l) +
+                        (delta(i,k) * ret_sssp(I,m+1,l) +
+                         delta(i,l) * ret_ssps(I, m+1, k)) / (2*(zeta+eta))
+                    )
+
+def build_sppp(I, RP_B, RW_P, zeta, eta, max_m):
+    for m in range(max_m-2):
+        for j in range(3):
+            for k in range(3):
+                for l in range(3):
+                    val = (
+                        RP_B[j] * ret_sspp(I, m, k, l) +
+                        RW_P[j] * ret_sspp(I, m+1, k, l) +
+                        (delta(j,k) * ret_sssp(I,m+1,l) +
+                         delta(j,l) * ret_ssps(I, m+1, k)) / (2*(zeta+eta))
+                    )
 
 def build_pppp(I, RQ_D, RW_Q, zeta, eta, rho, max_m):
     for m in range(max_m-3):
@@ -511,8 +632,77 @@ def build_pppp(I, RQ_D, RW_Q, zeta, eta, rho, max_m):
                         )
                         set_pppp(I, m, i, j, k, l, val)
 
-# Recursion logic for eri tensor
-def needs_recursion(params):
+
+
+def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
+    """
+    Given four primitives, return a dict with all deterministic parameters:
+    """
+
+    zeta_a, A, (la,ma,na) = a_prim
+    zeta_b, B, (lb,mb,nb) = b_prim
+    zeta_c, C, (lc,mc,nc) = c_prim
+    zeta_d, D, (ld,md,nd) = d_prim
+
+    # Gaussian product theorem
+    zeta = zeta_a + zeta_b
+    eta = zeta_c + zeta_d
+    xi = (zeta_a*zeta_b) / (zeta_a + zeta_b)
+    P = (zeta_a*A + zeta_b*B) / zeta
+    Q = (zeta_c*C + zeta_d*D) / eta
+    W = (zeta*P + eta*Q) / (zeta+eta)
+    rho = zeta * eta / (zeta + eta)
+    RPQ = P-Q
+    T = rho * np.dot(RPQ, RPQ)
+
+    # Boys function up to max needed order
+    max_m = la + lb + lc + ld + ma + mb + mc + md + na + nb + nc + nd
+    F = boys_sequence(max_m, T)
+
+    # Compute K prefactor for (00|00)
+    def K_func(zeta,zeta_p,R,R_p):
+        RRp = R - R_p
+        return 2**0.5 * (pi**(5/4)) / (zeta + zeta_p) * np.exp( - (zeta*zeta_p * np.dot(RRp, RRp)) / (zeta + zeta_p) )
+
+
+    # Prefactors and vectors for recurrences
+    ssss_coeff = K_func(zeta_a, zeta_b, A, B) * K_func(zeta_c, zeta_d, C, D) / sqrt(zeta+eta)
+
+    RP_A = P-A
+    RP_B = P-B
+    RQ_C = Q-C
+    RQ_D = Q-D
+    RW_P = W-P
+    RW_Q = W-Q
+
+
+    return {
+        'a_ang': (la, ma, na), 'b_ang': (lb, mb, nb),
+        'c_ang': (lc, mc, nc), 'd_ang': (ld, md, nd),
+        'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D, 'P': P,
+        'ssss_coeff': ssss_coeff,
+        'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RW_P': RW_P, 'RW_Q': RW_Q,
+        'F': F, 'max_m': max_m, 'T': T
+        }
+
+# Recursion logic
+def needs_recursion_one_electron(params):
+    la, ma, na = params['a_ang']
+    lb, mb, nb = params['b_ang']
+
+    def total(lmn): return sum(lmn)
+
+    L1 = total((la, ma, na))
+    L2 = total((lb, mb, nb))
+
+    return {
+        "ps": L1 > 0,
+        "sp": L2 > 0,
+        "pp": L1 > 0 and L2 > 0
+    }
+
+
+def needs_recursion_two_electron(params):
     la, ma, na = params['a_ang']
     lb, mb, nb = params['b_ang']
     lc, mc, nc = params['c_ang']
@@ -529,10 +719,78 @@ def needs_recursion(params):
 
     # Precompute derived needs
     need["ppss"] = need["psss"] and need["spss"]
+    need["psps"] = need["psss"] and need["ssps"]
+    need["pssp"] = need["psss"] and need["sssp"]
+    need["spps"] = need["spss"] and need["ssps"]
+    need["spsp"] = need["spss"] and need["sssp"]
+    need["sspp"] = need["ssps"] and need["sssp"]
     need["ppps"] = need["ppss"] and need["ssps"]
-    need["pppp"] = need["ppps"] and need["sssp"]
+    need["ppsp"] = need["ppss"] and need["sssp"]
+    need["pspp"] = need["psss"] and need["sspp"]
+    need["sppp"] = need["spss"] and need["sspp"]
+    need["pppp"] = need["ppss"] and need["sspp"]
 
     return need
+
+def primitive_st(params):
+    """
+    Compute S, T, and V primitive integrals.
+    Returns: dict with keys 'S', 'T', 'V', each mapping to I[0][a,b] arrays
+    """
+    A, B = params['A'], params['B']
+    RP_A, RP_B = params['RP_A'], params['RP_B']
+    zeta, xi = params['zeta'], params['xi']
+    P = params['P']
+
+    RAB2 = np.dot(A - B, A - B)
+
+    # Initialize tensors
+    I_s = [np.zeros((2,)*6)]
+    I_t = [np.zeros((2,)*6)]
+
+    # === base (s|s) case ===
+    # Overlap (S)
+    vals = (np.pi / zeta)**1.5 * np.exp(-xi * RAB2)
+    set_ss(I_s, 0, vals)
+    # Kinetic (T)
+    valT = xi * (3 - 2 * xi * RAB2) * vals
+    set_ss(I_t, 0, valT)
+
+    # Only do higher order terms when needed
+    need = needs_recursion_one_electron(params)
+    if need["ps"]: build_ps(I_s, I_t, xi, RP_A) # Builds s and t recursions
+    if need["sp"]: build_sp(I_s, I_t, xi, RP_B)
+    if need["pp"]: build_pp(I_s, I_t, xi, zeta, RP_B)
+
+    return I_s[0], I_t[0]
+
+def primitive_v(params):
+    A, B = params['A'], params['B']
+    RP_A, RP_B = params['RP_A'], params['RP_B']
+    zeta, xi = params['zeta'], params['xi']
+    max_m = params['max_m']
+    P = params['P']
+    R_nuc = params['R_nuc']
+    RP_nuc = P - R_nuc
+
+    RAB2 = np.dot(A - B, A - B)
+    U = zeta * np.dot(RP_nuc, RP_nuc)
+    F = boys_sequence(max_m, U)
+    I_v = [np.zeros((2,)*6) for _ in range(max_m+1)]
+
+    vals = (np.pi / zeta)**1.5 * np.exp(-xi * RAB2)
+    # Nuclear (V)
+    for m in range(max_m+1):
+        val = 2*(zeta / pi)**0.5 * vals * F[m]
+        set_ss(I_v, m, val)
+
+    # Only do higher order terms when needed
+    need = needs_recursion_one_electron(params)
+    if need["ps"]: build_psv(I_v, RP_A, RP_nuc) # Builds v recursion
+    if need["sp"]: build_spv(I_v, RP_B, RP_nuc)
+    if need["pp"]: build_ppv(I_v, zeta, RP_B, RP_nuc)
+
+    return I_v[0]
 
 def primitive_eri(params):
     # Unpack parameters
@@ -544,14 +802,11 @@ def primitive_eri(params):
     RP_A, RP_B = params['RP_A'], params['RP_B']
     RQ_C, RQ_D = params['RQ_C'], params['RQ_D']
     RW_P, RW_Q = params['RW_P'], params['RW_Q']
-    F = params['F']
+    F, max_m = params['F'], params['max_m']
     ssss_coeff = params['ssss_coeff']
 
     # Determine whether each vertical recursion layer is needed
-    need = needs_recursion(params)
-
-    # max order for (ss,ss)^(m)
-    max_m = la + ma + na + lb + mb + nb + lc + mc + nc + ld + md + nd
+    need = needs_recursion_two_electron(params)
 
     # Allocate full tensor
     I = [np.zeros((2,)*12) for _ in range(max_m + 1)]
@@ -566,130 +821,83 @@ def primitive_eri(params):
     if need["ssps"]:  build_ssps(I, RQ_C, RW_Q, max_m)
     if need["sssp"]:  build_sssp(I, RQ_D, RW_Q, max_m)
     if need["ppss"]:  build_ppss(I, RP_B, RW_P, rho, zeta, max_m)
+    if need["psps"]:  build_psps(I, RQ_C, RW_Q, zeta, eta, max_m)
+    if need["spsp"]:  build_spsp(I, RQ_D, RW_Q, zeta, eta, max_m)
+    if need["spps"]:  build_spps(I, RQ_C, RW_Q, zeta, eta, max_m)
+    if need["pssp"]:  build_pssp(I, RQ_D, RW_Q, zeta, eta, max_m)
+    if need["sspp"]:  build_sspp(I, RQ_D, RW_Q, rho, eta, max_m)
+
     if need["ppps"]:  build_ppps(I, RQ_C, RW_Q, zeta, eta, max_m)
-    if need["pppp"]:
-        build_spps(I, RQ_C, RW_Q, zeta, eta, max_m)
-        build_psps(I, RQ_C, RW_Q, zeta, eta, max_m)
-        build_pppp(I, RQ_D, RW_Q, zeta, eta, rho, max_m)
+    if need["ppsp"]:  build_ppsp(I, RQ_D, RW_Q, zeta, eta, max_m)
+    if need["pspp"]:  build_pspp(I, RP_A, RW_P, zeta, eta, max_m)
+    if need["sppp"]:  build_sppp(I, RP_B, RW_P, zeta, eta, max_m)
 
-    return I
+    if need["pppp"]:  build_pppp(I, RQ_D, RW_Q, zeta, eta, rho, max_m)
 
-def primitive_overlap(params):
-    """
-    Compute 1-electron overlap integrals using Obara–Saika recursion.
-    Returns: I[0][i,j,k,l,m,n] where indices: i,j,k is angular momentum of primitive 2
-    and l,m,n is angular momentum of primitive 1
-    """
-    A = params['A']
-    B = params['B']
-    RP_A = params['RP_A']
-    RP_B = params['RP_B']
-    zeta = params['zeta']
-    xi = params['xi']
-
-    I = [np.zeros((2,)*6)]
-
-    # Base case (s|s)
-    RAB2 = np.dot(A-B, A-B)
-    val = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
-    set_ss(I,0, val)
-
-    # (p|s) and (s|p)
-    build_ps(I, RP_A)
-    build_sp(I, RP_B)
-    # (p|p)
-    build_pp(I, zeta, RP_B)
 
     return I
 
 
-def primitive_kinetic(params):
+def compute_one_electron_element(mu, nu, basis_set, nuclei):
     """
-    Obara–Saika vertical recursion for kinetic integrals:
-      ⟨μ| -½∇² |ν⟩
+    Compute the one-electron integrals S_{μν}, T_{μν}, V_{μν} using unified OS recursion.
+    Returns:
+        (S_mu_nu, T_mu_nu, V_mu_nu)
     """
-    # Unpack what you need
-    A, B      = params['A'], params['B']
-    RP_A, RP_B= params['RP_A'], params['RP_B']
-    zeta       = params['zeta']
-    xi         = params['xi']
+    ci = basis_set[mu]
+    cj = basis_set[nu]
 
-    I1 = [np.zeros((2,)*6)]
-    I2 = [np.zeros((2,)*6)]
+    S = 0.0
+    T = 0.0
+    V = 0.0
 
-    # Base (s|T|s) kinetic:
-    # FIX: uses explicit (s||s), resuse from S matrix instead
-    RAB2 = np.dot(A - B, A - B)
+    for i, a_prim in enumerate(ci.primitives):
+        for j, b_prim in enumerate(cj.primitives):
+            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
+            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
 
-    valS = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
-    set_ss(I2,0, valS)
+            norm = (
+                gaussian_norm(zeta_a, ang_a) *
+                gaussian_norm(zeta_b, ang_b)
+            )
 
+            coeff = coeff_a * coeff_b * norm
 
-    for i in range(3):
-        val = RP_A[i] * ret_ss(I2,0)
-        set_ps(I2,0, i, val)
+            params = compute_primitive_parameters(
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b),
+                (zeta_a, center_a, ang_a),
+                (zeta_b, center_b, ang_b)
+                )
 
-    for j in range(3):
-        val = RP_B[j] * ret_ss(I2,0)
-        set_sp(I2,0, j, val)
+            la, ma, na = ang_a
+            lb, mb, nb = ang_b
 
-    for i in range(3):
-        for j in range(3):
-            val = RP_B[j] * ret_ps(I2,0, i) + delta(i,j) / (2*zeta) * ret_ss(I2,0)
-            set_pp(I2,0, i, j, val)
+            if la == 0 and ma == 0 and na == 0 and nb == 1:
+                print(f"mu={mu}, nu={nu}, ang_a={ang_a}, ang_b={ang_b}, needs: {needs_recursion_one_electron(params)}")
 
+            prim_S, prim_T = primitive_st(params)
+                
+            if la == 0 and ma == 0 and na == 0 and nb == 1:
+                print("Prim_S: ", prim_S[la, ma, na, lb, mb, nb])
+                print("Prim_T: ", prim_T[la, ma, na, lb, mb, nb])
 
-    valT = xi * (3 - 2*xi*RAB2) * ret_ss(I2,0)
-    set_ss(I1,0, valT)
-
-    build_psT(I1, I2, xi, RP_A)
-    build_spT(I1, I2, xi, RP_B)
-    build_ppT(I1, I2, zeta, xi, RP_B)
-    
-    return I1
-
-def primitive_nuclear(params):
-    """
-    Obara–Saika vertical recursion for nuclear‐attraction to nucleus at Cn with charge Zn:
-      ⟨μ| -Z/|r-Cn| |ν⟩
-    """
-    A, B, P    = params['A'], params['B'], params['P']
-    RP_A, RP_B = params['RP_A'], params['RP_B']
-    zeta       = params['zeta']
-    xi        = params['xi']
-    C, Z_C   = params['R_C'], params['Z_C']
-    RP_C = P - C
-    
-    U          = zeta * np.dot(P-C, P-C)
-
-    max_m = 2
-    F = boys_sequence(max_m, U)
-    I1 = [np.zeros((2,)*6) for _ in range(max_m + 1)]
+            S += coeff * prim_S[la, ma, na, lb, mb, nb]
+            T += coeff * prim_T[la, ma, na, lb, mb, nb]
 
 
-    RAB2 = np.dot(A-B, A-B)
-    valS = (np.pi / zeta) ** (1.5) * np.exp(-xi * RAB2)
+            # Nuclear attraction is looped over all nuclei
+            for Z_nuc, R_nuc in nuclei:
+                # Add nuclear center to params for computing prim_V
+                params["R_nuc"] = np.array(R_nuc)
+               
 
-    # Base (s|A0|s) nuclear:
-    for m in range(3):
-        val = 2 * (zeta / pi)**(0.5) * valS * F[m]
-        set_ss(I1,m, val)
+                prim_V = primitive_v(params)
 
-    build_psV(I1, RP_A, RP_C)
-    build_ppV(I1, zeta, RP_B, RP_C)
+                V += -Z_nuc * coeff * prim_V[la, ma, na, lb, mb, nb]
 
-    return I1
+    return S, T, V
 
-
-
-
-
-def gaussian_norm(zeta: float, angmom: tuple[int,int,int]) -> float:
-    """Compute normalization constant for a primitive Gaussian."""
-    l, m, n = angmom
-    prefactor = (2*zeta/np.pi)**0.75 * (4*zeta)**((l+m+n)/2)
-    dfactor = np.sqrt(double_factorial(2*l-1) * double_factorial(2*m-1) * double_factorial(2*n-1))
-    return prefactor * dfactor
 
 def compute_eri_element(mu, nu, lam, sig, basis_set):
     """
@@ -779,174 +987,22 @@ def compute_eri_tensor_sparse(basis_set):
 
     return eri_dict
 
-####################################################################################################
-####################################################################################################
-####################################################################################################
-
    
-    
-def compute_overlap_element(mu, nu, basis_set):
-    """
-    Compute the overlap integral S_{μν} using OS recursion.
-    """
-    ci = basis_set[mu]
-    cj = basis_set[nu]
-    S = 0.0
-
-    for a_prim in ci.primitives:
-        for b_prim in cj.primitives:
-            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
-            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
-
-            norm = (
-                gaussian_norm(zeta_a, ang_a) *
-                gaussian_norm(zeta_b, ang_b)
-            )
-
-            params = compute_primitive_parameters(
-                (zeta_a, center_a, ang_a),
-                (zeta_b, center_b, ang_b),
-                (zeta_a, center_a, ang_a),
-                (zeta_b, center_b, ang_b)
-            )
-
-            val_smat = primitive_overlap(params)
-
-            la, ma, na = ang_a
-            lb, mb, nb = ang_b
-
-            val = val_smat[0][la, ma, na, lb, mb, nb]
-            total_weight = coeff_a * coeff_b
-            S += total_weight * val * norm
-
-    return S
-
-def compute_kinetic_element(mu, nu, basis_set):
-    """
-    Compute the overlap integral S_{μν} using OS recursion.
-    """
-    ci = basis_set[mu]
-    cj = basis_set[nu]
-    T = 0.0
-
-    for a_prim in ci.primitives:
-        for b_prim in cj.primitives:
-            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
-            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
-
-            norm = (
-                gaussian_norm(zeta_a, ang_a) *
-                gaussian_norm(zeta_b, ang_b)
-            )
-
-            params = compute_primitive_parameters(
-                (zeta_a, center_a, ang_a),
-                (zeta_b, center_b, ang_b),
-                (zeta_a, center_a, ang_a),
-                (zeta_b, center_b, ang_b)
-            )
-
-            val_tmat = primitive_kinetic(params)
-
-            la, ma, na = ang_a
-            lb, mb, nb = ang_b
-
-            val = val_tmat[0][la, ma, na, lb, mb, nb]
-            total_weight = coeff_a * coeff_b
-            T += total_weight * val * norm
-
-    return T
-
-
-def compute_nuclear_element(mu, nu, basis_set, nuclei):
-    ci = basis_set[mu]
-    cj = basis_set[nu]
-    V = 0.0
-
-    for a_prim in ci.primitives:
-        for b_prim in cj.primitives:
-            zeta_a, coeff_a, center_a, ang_a = a_prim.zeta, a_prim.coeff, a_prim.center, a_prim.angmom
-            zeta_b, coeff_b, center_b, ang_b = b_prim.zeta, b_prim.coeff, b_prim.center, b_prim.angmom
-
-            norm = (
-                gaussian_norm(zeta_a, ang_a) *
-                gaussian_norm(zeta_b, ang_b)
-            )
-
-            for Z_A, R_A in nuclei:
-                params = compute_primitive_parameters(
-                    (zeta_a, center_a, ang_a),
-                    (zeta_b, center_b, ang_b),
-                    (zeta_a, center_a, ang_a),
-                    (zeta_b, center_b, ang_b)
-                )
-
-                # Add nuclear center
-                params["R_C"] = np.array(R_A)
-                params["Z_C"] = Z_A
-                A = params['A']
-                B = params['B']
-
-                val_tensor = primitive_nuclear(params)
-
-                la, ma, na = ang_a
-                lb, mb, nb = ang_b
-
-                val = val_tensor[0][la, ma, na, lb, mb, nb]
-                total_weight = coeff_a * coeff_b * norm
-                if np.isnan(val) or np.isinf(val) or abs(val) > 100:
-                    print(f"mu={mu}, nu={nu}, V[mu,nu] = {val}, A = {A}, B = {B}, R_C = {R_A}")
-                    val = 0.0
-
-                V += -Z_A * total_weight * val
-
-
-
-    return V
-
-def compute_overlap_matrix(basis_set):
+def build_one_electron_matrices(basis_set, nuclei):
     nbf = len(basis_set)
     S = np.zeros((nbf, nbf))
-
-    for mu in range(nbf):
-        for nu in range(mu + 1):  # exploit symmetry
-            val = compute_overlap_element(mu, nu, basis_set)
-            S[mu, nu] = S[nu, mu] = val
-
-    return S
-
-def compute_kinetic_matrix(basis_set):
-    nbf = len(basis_set)
     T = np.zeros((nbf, nbf))
+    V = np.zeros((nbf, nbf))
+    H = np.zeros((nbf, nbf))
 
-    for mu in range(nbf):
-        for nu in range(mu + 1):  # exploit symmetry
-            val = compute_kinetic_element(mu, nu, basis_set)
-            T[mu, nu] = T[nu, mu] = val
-
-    return T
-
-def compute_kinetic_matrix_old(basis_set):
-    nbf = len(basis_set)
-    T = np.zeros((nbf, nbf))
     for mu in range(nbf):
         for nu in range(mu+1):
-            val = compute_kinetic_element(mu, nu, basis_set)
-            T[mu, nu] = T[nu, mu] = val
-    return T
+            s, t, v = compute_one_electron_element(mu, nu, basis_set, nuclei)
+            S[mu, nu] = S[nu, mu] = s
+            T[mu, nu] = T[nu, mu] = t
+            V[mu, nu] = V[nu, mu] = v
 
-def compute_nuclear_matrix(basis_set, nuclei):
-    nbf = len(basis_set)
-    V = np.zeros((nbf, nbf))
+    H = T + V
+    return S, T, V, H
 
-    for mu in range(nbf):
-        for nu in range(mu + 1):
-            val = compute_nuclear_element(mu, nu, basis_set, nuclei)
-            V[mu, nu] = V[nu, mu] = val
 
-    return V
-
-def compute_hcore(basis_set, nuclei):
-    T = compute_kinetic_matrix(basis_set)
-    V = compute_nuclear_matrix(basis_set, nuclei)
-    return T, V, T + V

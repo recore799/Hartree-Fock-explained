@@ -194,7 +194,7 @@ def build_integral_arrays(primitives, pos, Z):
     V = compute_nuclear_attraction_matrix(primitives, pos, Z)
     H_core = T + V
     eri_dict = compute_eri_tensor_sparse(primitives, pos)
-    return S, H_core, eri_dict
+    return S, T, V, H_core, eri_dict
 
 
 

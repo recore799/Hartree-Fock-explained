@@ -3,15 +3,6 @@ import time
 
 from src.scf.rhf_os import scf_rhf
 
-# Oxygen at origin
-O_pos = [0.000000, 0.000000, 0.000000]
-
-# Hydrogens
-H1_pos = [ 0.000000, -1.43042809, -1.10715266]
-H2_pos = [ 0.000000,  1.43042809, -1.10715266]
-
-
-
 class Primitive:
     def __init__(self, zeta, coeff, center, angmom):
         self.zeta = zeta
@@ -64,9 +55,8 @@ def build_H2O_sto3g_basis():
         idx += 1
 
     # === Hydrogens ===
-    H1_pos = [0.0, -2.70311733, -2.09221530]
-    H2_pos = [0.0,  2.70311733, -2.09221530]
-
+    H1_pos = [0.0, -1.43255657, 1.03903350] 
+    H2_pos = [0.0,  1.43255657, 1.03903350]
 
     H_exps = [3.42525091, 0.62391373, 0.16885540]
     H_coeffs = [0.15432897, 0.53532814, 0.44463454]
@@ -79,22 +69,12 @@ def build_H2O_sto3g_basis():
         basis_set[idx] = H_1s
         idx += 1
 
-    return basis_set
+    return basis_set, [8.0, 1.0, 1.0], [O_pos, H1_pos, H2_pos]
 
-basis_set = build_H2O_sto3g_basis()
+basis_set, Z_nuc, R_nuc = build_H2O_sto3g_basis()
 
 # Nuclear geometry
-nuclei = [
-    (8.0, [0.0, 0.0, 0.0]),
-    (1.0, [0.0, -2.70311733, -2.09221530]),
-    (1.0, [0.0,  2.70311733, -2.09221530])
-]
-
-Z_nuc = [8.0, 1.0, 1.0]
-R_nuc = [[0.0, 0.0, 0.0],
-         [0.0, -2.70311733, -2.09221530],
-         [0.0,  2.70311733, -2.09221530]]
-
+nuclei = list(zip(Z_nuc, R_nuc))
 
 start_time = time.time()
 scf_rhf(n_elec=10, R_nuc=R_nuc, Z_nuc=Z_nuc, verbose=1, basis_set=basis_set, nuclei=nuclei)

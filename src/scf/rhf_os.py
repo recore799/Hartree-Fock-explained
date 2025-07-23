@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import eigh, fractional_matrix_power
-from src.integrals.obara_saika import compute_eri_tensor_sparse, compute_overlap_matrix, compute_hcore
+from src.integrals.obara_saika import compute_eri_tensor_sparse, build_one_electron_matrices
 
 def scf_rhf(
         # primitives: list[list[tuple[float, float]]],
@@ -26,10 +26,8 @@ def scf_rhf(
     
     # Build integral arrays
     eri_dict = compute_eri_tensor_sparse(basis_set)
-    S = compute_overlap_matrix(basis_set)
-    T, V, H_core = compute_hcore(basis_set, nuclei)
-
-   
+    S, T, V, H_core = build_one_electron_matrices(basis_set, nuclei)
+  
     # Number of basis functions and electrons
     nbf = S.shape[0]
     n_occ = n_elec // 2  # Number of occupied orbitals (doubly occupied)
@@ -119,6 +117,8 @@ def scf_rhf(
         'density_matrix': P,
         'fock_matrix': F,
         'overlap_matrix': S,
+        'kinetic_matrix': T,
+        'nuclear_matrix': V,
         'core_hamiltonian': H_core,
         'iterations': iteration + 1,
         'converged': rms_change < conv_tol,
@@ -195,10 +195,25 @@ def print_final_results(results):
     # for i in range(C.shape[1]):
     #     coeffs = "  ".join(f"{val:>8.4f}" for val in C[:, i])
     #     print(f"  Orbital {i+1:<2}: {coeffs}")
+    # Formatting options
+    np.set_printoptions(
+        precision=6,  # 6 decimal places
+        suppress=True, # Suppress scientific notation
+        linewidth=100  # Line width for printing
+    )
+    
+    # Print formatted matrices
+    def print_matrix(name, matrix):
+        print(f"\n{name} ({matrix.shape}):")
+        print(matrix)
+
+    print_matrix("Overlap (S)", results['overlap_matrix'])
+    print_matrix("Kinetic (T)", results['kinetic_matrix'])
+    print_matrix("Nuclear Attraction (V)", results['nuclear_matrix'])
 
     # print("S matrix:\n", results['overlap_matrix'])
-    # print("T matrix:\n", results['T'])
-    # print("V matrix:\n", results['V'])
+    # print("T matrix:\n", results['kinetic_matrix'])
+    # print("V matrix:\n", results['nuclear_matrix'])
     # print("P matrix:\n", results['density_matrix'])
     # print("C matrix:\n", results['orbital_coefficients'])
     # print("H matrix:\n", results['core_hamiltonian'])

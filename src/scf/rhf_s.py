@@ -26,7 +26,7 @@ def scf_rhf(
     """
     
     # Build integral arrays
-    S, H_core, eri_dict = build_integral_arrays(primitives, pos, Z)
+    S, T, V, H_core, eri_dict = build_integral_arrays(primitives, pos, Z)
 
    
     # Number of basis functions and electrons
@@ -121,6 +121,8 @@ def scf_rhf(
         'density_matrix': P,
         'fock_matrix': F,
         'overlap_matrix': S,
+        'kinetic_matrix': T,
+        'nuclear_matrix': V,
         'core_hamiltonian': H_core,
         'iterations': iteration + 1,
         'converged': rms_change < conv_tol,
@@ -183,17 +185,17 @@ def print_final_results(results):
     #     coeffs = "  ".join(f"{val:>8.4f}" for val in C[:, i])
     #     print(f"  Orbital {i+1:<2}: {coeffs}")
 
-    # print("S matrix:\n", results['overlap_matrix'])
-    # print("T matrix:\n", results['T'])
-    # print("V matrix:\n", results['V'])
-    # print("P matrix:\n", results['density_matrix'])
-    # print("C matrix:\n", results['orbital_coefficients'])
-    # print("H matrix:\n", results['core_hamiltonian'])
+    print("S matrix:\n", results['overlap_matrix'])
+    print("T matrix:\n", results['kinetic_matrix'])
+    print("V matrix:\n", results['nuclear_matrix'])
+    print("P matrix:\n", results['density_matrix'])
+    print("C matrix:\n", results['orbital_coefficients'])
+    print("H matrix:\n", results['core_hamiltonian'])
 
     eri = results['eri_tensor']
     eri_size = len(eri)
 
-    print("ERI tensor shape:\n", eri_size)
+    # print("ERI tensor shape:\n", eri_size)
     # if 'eri_tensor' in results:
     #     print("\nUnique Electron Repulsion Integrals (ERIs):")
     #     eri_dict = results['eri_tensor']
