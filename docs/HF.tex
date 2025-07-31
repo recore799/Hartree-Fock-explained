@@ -1,4 +1,4 @@
-% Created 2025-06-19 Thu 17:39
+% Created 2025-07-23 Wed 00:27
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -35,10 +35,10 @@
 \tableofcontents
 
 \section{SCF Implementation}
-\label{sec:org4d05cdf}
+\label{sec:orga4be61f}
 
 \subsection{Roothaan equations}
-\label{sec:org1db0400}
+\label{sec:org28d081b}
 
 \begin{itemize}
 \item Once the spin is integrated out, the HF equations in spatial orbital form are
@@ -74,7 +74,7 @@ Las columnas de esta matriz describen a los orbitales moleculares, i.e. \(\psi_i
 \end{itemize}
 \end{itemize}
 \subsection{Density matrix}
-\label{sec:org4371283}
+\label{sec:orgc39d8fc}
 
 In restricted HF (for closed-shell) molecules, the charge density is
 
@@ -94,7 +94,7 @@ then the density matrix is
 P_{\mu\nu}= 2 \sum_a^{N/2} C_{\mu a}C_{\nu a}^{ * }
 \end{equation}
 \subsection{Fock matrix}
-\label{sec:org8223d82}
+\label{sec:org20beb46}
 
 The matrix representation of the Fock operator \(f(1) = h(1) + \displaystyle\sum_a^{N/2} 2J_a(1) - K_a(1)\) in the basis \(\{\phi_{\mu}\}\) is
 
@@ -140,7 +140,7 @@ G_{\mu\nu}= \sum_{\lambda\alpha} P_{\lambda\sigma}[(\mu\nu|\sigma\lambda) - \fra
 \[ (\mu\nu|\lambda\sigma) = \int\dd{r_1}\dd{r_2} \phi_{\mu}^{ * }(1)\phi_{\nu}(1)r_{12}^{-1}\phi_{\lambda}^{ * }(2)\phi_{\sigma}(2) \]
 \end{itemize}
 \subsection{Canonical orthogonalization}
-\label{sec:org13207c7}
+\label{sec:org8df9bea}
 
 The condition that a transformation matrix \(X\) must obey in order to form an orthonormal set
 
@@ -192,7 +192,7 @@ this transformed Roothaan equations can be solved for \(C'\) by diagonalizing \(
 
 Therefore, given \(F\), we can use (\ref{eq:rooth-trans}), (\ref{eq:F-trans}), and (\ref{eq:C-trans}) to solve the Roothaan equations \(FC=SC\epsilon\) for \(C\) and \(\epsilon\)
 \subsection{SCF procedure}
-\label{sec:org8911117}
+\label{sec:org5a6347b}
 
 The Hartree-Fock limit is when the basis set is essentially complete and Hartree-Fock procedure is used in this case, but it can also be used in this case interchangeable as SCF procedure
 
@@ -220,9 +220,76 @@ The Hartree-Fock limit is when the basis set is essentially complete and Hartree
 \item Determine wether the procedure has converged
 \end{enumerate}
 \subsection{Integral evaluation with 1s primitive Gaussians}
-\label{sec:org0185c9f}
+\label{sec:orgf72c074}
+
+\subsection{Obara-Saika}
+\label{sec:org89261be}
+
+\subsubsection{Two-electron integrals}
+\label{sec:org5a91fd2}
+
+Recurrence expressions for the electron repulsion integrals over s and p Cartesian Gaussian functions
+
+\begin{itemize}
+\item \((ss,ss)^{(0)} = (\zeta + \eta)^{-1/2} K(\zeta_a,\zeta_b,A,B)K(\zeta_c,\Zeta_d,C,D)F_0(T)\)
+\item \((p_i s,ss)^{(0)} = (P_i - A_i)(ss,ss)^{(0)} + (W_i - P_i)(ss,ss)^{(1)}\)
+\item \((p_i s, p_k s)^{(0)} = (Q_K - C_k)(p_i s,ss)^{ (0)} + (W_k - Q_k)(p_i s, ss)^{(1)} + \frac{\delta_{ik}}{2(\zeta + \eta)}(ss,ss)^1\)
+\item \((p_ip_j,ss)^{(0)} = (P_j-B_j)(p_i s,ss)^{(0)} + (W_j-P_j)(p_i s,ss)^{(1)} + \frac{\delta_{ij}}{2\zeta}\{ (ss,ss)^{(0)} - \frac{\rho}{\zeta}(ss,ss)^{(1)} \}\)
+\item \((p_ip_j,p_k s)^{(0)} = (Q_k - C_k)(p_ip_j,ss)^{(0)} + (W_k-Q_k)(p_ip_j,ss)^{(1)} + \frac{1}{2(\zeta + \eta)} \{ \delta_{ij}(sp_j,ss)^{(1)} + \delta_{jk}(p_i s,ss)^{(1)} \}\)
+\item \((p_i p_j, p_k p_l)^{(0)} = (Q_l - D_l)(p_ip_j, p_k s)^{(0)} + (W_l - Q_l)(p_i p_j, p_k s)^{(1)} + \frac{1}{2(\zeta+\eta)}\{ \delta_{il}(sp_j,p_k s)^{(1)} + \delta_{jl}(p_i s, p_k s)^{(1)} \} + \frac{\delta_{kl}}{2\eta}\{ (p_i p_j, ss)^{(0)} - \frac{\rho}{\eta}(p_ip_j,ss)^{(1)} \}\)
+\end{itemize}
+
+The variables involved are
+
+\begin{itemize}
+\item \(\zeta = \zeta_a + \zeta_b\)
+\item \(P = \frac{\zeta_a A + \zeta_b B}{\zeta}\)
+\item \(G = \frac{\zeta P + \zeta_c C}{\zeta + \zeta_c}\)
+\item \(\eta = \zeta_c + \zeta_d\)
+\item \(\rho = \frac{\zeta \eta}{\zeta + \eta}\)
+\item \(Q = \frac{1}{\eta}(\zeta_c C + \zeta_d D)\)
+\item \(W = \frac{\zeta P + \eta Q}{\zeta + \eta}\)
+\item \(F_m(T)\) is the mth order Boys function
+\item \(T = \rho(P-Q)^2\)
+\item \(K(\zeta,\zeta',R,R') = 2^{1/2} \frac{\pi^{5/4}}{\zeta + \zeta'} exp(- \frac{\zeta\zeta'}{\zeta+\zeta'}(R-R')^2)\)
+\end{itemize}
+
+Then the auxiliary repulsion integral \((ab,cd)^{(m)}\) is defined by
+
+\begin{itemize}
+\item \((ab,cd)^{(m)} = \frac{2}{\pi^{1/2}} \int_0^{\infty} du (\frac{u^2}{\rho + u^2})^m (ab|u|cd)\)
+
+where the integral in \(u\) is introduced by the integral representation of the \(r_{12}^{-1}\) operator in \((ab,cd)\) and in particular, the true ERI is \((ab,cd)^{(0)}\)
+\end{itemize}
+\subsubsection{One-electron integrals}
+\label{sec:org11480df}
+
+Recurrence expressions for the nuclear attraction integrals
+
+\begin{itemize}
+\item \((s|A_0|s)^{(0)} = 2(\frac{\zeta}{\pi})^{1/2} (s||s) F_0(U)\)
+\item \((p_i|A_0|s)^{(0)} = (P_i - A_i)(s|A_0|s)^{(0)} - (P_i-C_i)(s|A_0|s)^{(1)}\)
+\item \((p_i|A_0|p_j)^{(0)} = (P_j - B_j)(p_i|A_0|s)^{(0)} - (P_j-C_j)(p_i|A_0|s)^{(1)}\)
+\item \((d_{ij}|A_0|s)^{(0)} = (P_j-A_j)(p_i|A_0|s)^{(0)} - (P_j-C_j)(p_i|A_0|s)^{(1)}\)
+\(+ \frac{\delta_{ij}}{2\zeta} \{(s|A_0|s)^{(0)}-(s|A_0|s)^{(1)}\}\)
+\item \((d_{ij}|A_0|p_k)^{(0)} = (P_k-B_k)(d_{ij}|A_0|s)^{(0)} - (P_k-C_k)(d_{ij}|A_0|s)^{(1)}\)
+\(+\frac{\delta_{ik}}{2\zeta} \{(p_j|A_0|s)^{(0)} - (p_j|A_0|s)^{(1)}\}\)
+\(+\frac{\delta_{jk}}{2\zeta}\{(p_i|A_0|s)^{(0)}-(p_i|A_0|s)^{(1)}\}\)
+\item \((d_{ij}|A_0|d_{kl})^{(0)} = (P_l-B_l)(d_{ij}|A_0|p_k)^{(0)} - (P_l-C_l)(d_{ij}|A_0|p_k)^{(1)}\)
+\(+\frac{\delta_{il}}{2\zeta}\{(p_j|A_0|p_k)^{(0)} - (p_j|A_0|p_k)^{(1)}\}\)
+\(+\frac{\delta_{jl}}{2\zeta}\{(p_i|A_0|p_k)^{(0)} - (p_i|A_0|p_k)^{(1)}\}\)
+\(+\frac{\delta_{kl}}{2\zeta}\{(d_{ij}|A_0|s)^{(0)} - (d_{ij}|A_0|s)^{(1)}\}\)
+\end{itemize}
+
+The new symbols are
+
+\begin{itemize}
+\item \((s||s)\) is the overlap integral between two s type Cartesian Gaussian functions \((s||s) = (\pi/\zeta)^{3/2} exp(-\xi(A-B)^2)\)
+
+\item The Boys function is evaluated on \(U = \zeta(P-C)^2\)
+\end{itemize}
 \section{STO-3G basis set}
-\label{sec:org5d45c60}
+\label{sec:org3efa7ca}
 
 \begin{itemize}
 \item Slater-type functions are nice for atom orbitals

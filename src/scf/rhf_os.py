@@ -164,7 +164,7 @@ def build_fock_matrix_sparse_OS(H_core: np.ndarray, P: np.ndarray, eri_dict: dic
             for lam in range(nbf):
                 for sig in range(nbf):
                     key1 = get_canonical_key(mu, nu, lam, sig)
-                    key2 = get_canonical_key(mu, lam, nu, sig)
+                    key2 = get_canonical_key(mu, lam, sig, nu)
 
                     eri1 = eri_dict.get(key1, 0.0)
                     eri2 = eri_dict.get(key2, 0.0)
@@ -207,9 +207,9 @@ def print_final_results(results):
         print(f"\n{name} ({matrix.shape}):")
         print(matrix)
 
-    print_matrix("Overlap (S)", results['overlap_matrix'])
-    print_matrix("Kinetic (T)", results['kinetic_matrix'])
-    print_matrix("Nuclear Attraction (V)", results['nuclear_matrix'])
+    # print_matrix("Overlap (S)", results['overlap_matrix'])
+    # print_matrix("Kinetic (T)", results['kinetic_matrix'])
+    # print_matrix("Nuclear Attraction (V)", results['nuclear_matrix'])
 
     # print("S matrix:\n", results['overlap_matrix'])
     # print("T matrix:\n", results['kinetic_matrix'])

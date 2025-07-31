@@ -189,6 +189,8 @@ The Hartree-Fock limit is when the basis set is essentially complete and Hartree
 
 ** Obara-Saika
 
+*** Two-electron integrals
+
 Recurrence expressions for the electron repulsion integrals over s and p Cartesian Gaussian functions
 
 - \( (ss,ss)^{(0)} = (\zeta + \eta)^{-1/2} K(\zeta_a,\zeta_b,A,B)K(\zeta_c,\Zeta_d,C,D)F_0(T) \)
@@ -216,8 +218,31 @@ Then the auxiliary repulsion integral \( (ab,cd)^{(m)} \) is defined by
 - \( (ab,cd)^{(m)} = \frac{2}{\pi^{1/2}} \int_0^{\infty} du (\frac{u^2}{\rho + u^2})^m (ab|u|cd) \)
 
   where the integral in \( u \) is introduced by the integral representation of the \( r_{12}^{-1} \) operator in \( (ab,cd) \) and in particular, the true ERI is \( (ab,cd)^{(0)} \)
+
+
+*** One-electron integrals
   
-  
+Recurrence expressions for the nuclear attraction integrals
+
+- \( (s|A_0|s)^{(0)} = 2(\frac{\zeta}{\pi})^{1/2} (s||s) F_0(U) \)
+- \( (p_i|A_0|s)^{(0)} = (P_i - A_i)(s|A_0|s)^{(0)} - (P_i-C_i)(s|A_0|s)^{(1)} \)
+- \( (p_i|A_0|p_j)^{(0)} = (P_j - B_j)(p_i|A_0|s)^{(0)} - (P_j-C_j)(p_i|A_0|s)^{(1)} \)
+- \( (d_{ij}|A_0|s)^{(0)} = (P_j-A_j)(p_i|A_0|s)^{(0)} - (P_j-C_j)(p_i|A_0|s)^{(1)} \)
+  \( + \frac{\delta_{ij}}{2\zeta} \{(s|A_0|s)^{(0)}-(s|A_0|s)^{(1)}\} \)
+- \( (d_{ij}|A_0|p_k)^{(0)} = (P_k-B_k)(d_{ij}|A_0|s)^{(0)} - (P_k-C_k)(d_{ij}|A_0|s)^{(1)} \)
+  \( +\frac{\delta_{ik}}{2\zeta} \{(p_j|A_0|s)^{(0)} - (p_j|A_0|s)^{(1)}\} \)
+  \( +\frac{\delta_{jk}}{2\zeta}\{(p_i|A_0|s)^{(0)}-(p_i|A_0|s)^{(1)}\} \)
+- \( (d_{ij}|A_0|d_{kl})^{(0)} = (P_l-B_l)(d_{ij}|A_0|p_k)^{(0)} - (P_l-C_l)(d_{ij}|A_0|p_k)^{(1)} \)
+  \( +\frac{\delta_{il}}{2\zeta}\{(p_j|A_0|p_k)^{(0)} - (p_j|A_0|p_k)^{(1)}\} \)
+  \( +\frac{\delta_{jl}}{2\zeta}\{(p_i|A_0|p_k)^{(0)} - (p_i|A_0|p_k)^{(1)}\} \)
+  \( +\frac{\delta_{kl}}{2\zeta}\{(d_{ij}|A_0|s)^{(0)} - (d_{ij}|A_0|s)^{(1)}\} \)
+
+The new symbols are
+
+- \( (s||s) \) is the overlap integral between two s type Cartesian Gaussian functions \( (s||s) = (\pi/\zeta)^{3/2} exp(-\xi(A-B)^2) \)
+
+- The Boys function is evaluated on \( U = \zeta(P-C)^2 \)
+
 
 * STO-3G basis set
 

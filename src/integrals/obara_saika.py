@@ -873,14 +873,14 @@ def compute_one_electron_element(mu, nu, basis_set, nuclei):
             la, ma, na = ang_a
             lb, mb, nb = ang_b
 
-            if la == 0 and ma == 0 and na == 0 and nb == 1:
-                print(f"mu={mu}, nu={nu}, ang_a={ang_a}, ang_b={ang_b}, needs: {needs_recursion_one_electron(params)}")
+            # if la == 0 and ma == 0 and na == 0 and nb == 1:
+            #     print(f"mu={mu}, nu={nu}, ang_a={ang_a}, ang_b={ang_b}, needs: {needs_recursion_one_electron(params)}")
 
             prim_S, prim_T = primitive_st(params)
                 
-            if la == 0 and ma == 0 and na == 0 and nb == 1:
-                print("Prim_S: ", prim_S[la, ma, na, lb, mb, nb])
-                print("Prim_T: ", prim_T[la, ma, na, lb, mb, nb])
+            # if la == 0 and ma == 0 and na == 0 and nb == 1:
+            #     print("Prim_S: ", prim_S[la, ma, na, lb, mb, nb])
+            #     print("Prim_T: ", prim_T[la, ma, na, lb, mb, nb])
 
             S += coeff * prim_S[la, ma, na, lb, mb, nb]
             T += coeff * prim_T[la, ma, na, lb, mb, nb]
