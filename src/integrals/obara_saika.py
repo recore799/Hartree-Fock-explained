@@ -25,13 +25,6 @@ def get_canonical_key(mu, nu, lam, sig):
     return (munu, lamsig) if munu >= lamsig else (lamsig, munu)
 
 
-def angular_index(a, b, c, d):
-    """
-    Converts angular momentum vectors to a multi-index for tensor storage.
-    """
-    return tuple(a + b + c + d)  # Each a/b/c/d is a list or tuple of 3 ints
-
-
 # Math functions
 def double_factorial(n: int) -> int:
     """Compute double factorial n!! = n*(n-2)*(n-4)*...*1 (or 2)"""
@@ -83,11 +76,35 @@ def generate_shells_bfs(max_l):
     
     return sorted(shells, key=lambda x: (sum(x), x))
 
+def get_relevant_shells(shells, min_sum, max_sum):
+    """Returns shells where min_sum <= sum(shell) <= max_sum, in reverse order."""
+    # Edge case: empty input
+    if not shells:
+        return []
+
+    # Find start_idx (first shell with sum >= min_sum)
+    try:
+        start_idx = next(i for i, shell in enumerate(shells) if sum(shell) >= min_sum)
+    except StopIteration:
+        return []  # No shell meets min_sum
+
+    # Find end_idx (last shell with sum <= max_sum)
+    try:
+        end_idx = next(
+            len(shells) - 1 - i 
+            for i, shell in enumerate(reversed(shells)) 
+            if sum(shell) <= max_sum
+        )
+    except StopIteration:
+        return []  # No shell meets max_sum
+
+    # Return sliced and reversed shells (as a list)
+    return list(reversed(shells[start_idx : end_idx + 1]))
+
 # TRY ONCE THE FULL RECURSION WORKS TO TEST IMPROVEMENT
 # @lru_cache(maxsize=None)
 # def get_I_AC(m, a, c):
 #     return I_AC.get((m, a, c), 0.0)
-
 def build_Ia0(params):
     RP_A = params['RP_A']
     RP_Q = params['RP_Q']
@@ -97,7 +114,7 @@ def build_Ia0(params):
     max_lb = params['max_lb']
     max_lc = params['max_lc']
     max_ld = params['max_ld']
-    prefactor = params['ssss_prefactor']
+    prefactor = params['ssss_coeff']
     boys = params['boys_sequence']
     shells_a = params['shells_a']
     n_shells = params['n_shells']
@@ -105,17 +122,17 @@ def build_Ia0(params):
     rho_over_zeta = rho / zeta
     half_zeta_inv = 0.5 / zeta
 
+    c = (0,0,0)
     I_A = defaultdict(float)
 
     # Build I^(m)(00|00)
     n1 = max_la + max_lb + max_lc + max_ld + 1
     for m in range(n1):
-        I_A[(m, shells_a[0])] = prefactor * boys[m]
+        I_A[(m, c, c)] = prefactor * boys[m] # Introduce the c key early
 
     # Build I^(m)(a0|00) via vertical recursion
     stop = n_shells[max_la+max_lb]
     for a in shells_a[:stop]:
-        print(a)
         current_l = sum(a)
         n = max_la + max_lb + max_lc + max_ld - current_l
         for m in range(n): # Determines how deep the recursion goes
@@ -133,17 +150,17 @@ def build_Ia0(params):
                 key_am_m1 = (m+1, a_minus)
 
                 # Recurrence relation:
-                term1 = RP_A[i] * I_A.get((m, a), 0.0)
-                term2 = rho_over_zeta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                term1 = RP_A[i] * I_A.get((m, a, c), 0.0)
+                term2 = rho_over_zeta * RP_Q[i] * I_A.get((m+1, a, c), 0.0)
                 if a[i] > 0:
                     term3 = a[i] * half_zeta_inv * (
                         I_A.get((m, a_minus), 0.0) -
-                        rho_over_zeta * I_A.get((m+1, a_minus), 0.0)
+                        rho_over_zeta * I_A.get((m+1, a_minus, c), 0.0)
                     ) 
                 else:
                     term3 = 0.0
 
-                I_A[(m, a_plus)] = term1 - term2 + term3
+                I_A[(m, a_plus, c)] = term1 - term2 + term3
     return I_A
 
 def build_Iac(params, I_A):
@@ -170,12 +187,12 @@ def build_Iac(params, I_A):
     # Port I^(m)(00|00) to I_AC
     n1 = max_la + max_lb + max_lc + max_ld + 1
     for m in range(n1):
-        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0)),0.0)
+        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0), (0,0,0)),0.0)
 
     # Build I(a0|c0) via vertical recursion
     # Generate p shell from I_A first
     for a in shells_a:
-        for m in range(max_lc+max_ld+1):
+        for m in range(max_lc+max_ld):
             for i in range(3):
                 c_plus = [0,0,0]
                 c_plus[i] += 1
@@ -185,18 +202,18 @@ def build_Iac(params, I_A):
                 a_minus[i] -= 1
                 a_minus = tuple(a_minus)
 
-                term1 = RQ_C[i] * I_A.get((m,a), 0.0)
-                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                term1 = RQ_C[i] * I_A.get((m,a, (0,0,0)), 0.0)
+                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a, (0,0,0)), 0.0)
                 if a[i] > 0:
-                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus), 0.0)
+                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus, (0,0,0)), 0.0)
                 else:
                     term4 = 0
                 I_AC[(m, a, c_plus)] = term1 + term2 + term4
 
     # Generete higher shells only when needed 
-    if max_lc >= 2 or max_ld >= 1:
-        for c in shells_c:
-            print("shell: ", c)
+    stop = n_shells[max_lc + max_ld]
+    if max_lc > 1 or max_ld > 0:
+        for c in shells_c[1:stop]:
             current_l = sum(c)
             n2 = max_lc + max_ld - current_l
             for m in range(n2):
@@ -240,19 +257,10 @@ def build_Iac(params, I_A):
 
 
 
-def get_relevant_shells(shells, min_sum, max_sum):
-    """Returns shells where min_sum <= sum(shell) <= max_sum, in reverse order."""
-    start_idx = next(i for i, shell in enumerate(shells) if sum(shell) >= min_sum)
-    end_idx = next(
-        len(shells) - 1 - i 
-        for i, shell in enumerate(reversed(shells)) 
-        if sum(shell) <= max_sum
-    )
-    return reversed(shells[start_idx : end_idx + 1])
-
 def build_Iabc(params, I_AC):
     A = params['A']
     B = params['B']
+    AB = params['AB']
     max_la = params['max_la']
     max_lb = params['max_lb']
     max_lc = params['max_lc']
@@ -262,51 +270,132 @@ def build_Iabc(params, I_AC):
     shells_b = params['shells_b']
     shells_c = params['shells_c']
 
-    AB = A - B
+    d = (0,0,0)
 
     # Initialize tensor
     I_ABC = defaultdict(float)
 
     # Select shells from max_lax+max_lb - 1 to max_la (in reverse)
-    relevant_shells_a = get_relevant_shells(shells_a, max_la, max_la + max_lb -1)
+    relevant_shells_a = get_relevant_shells(shells_a, max_la, max_la + max_lb - 1)
 
     start = n_shells[max_lc]
-    for a in relevant_shells_a: # Loop in reversed order
-        for b in shells_b:
-            for c in shells_c[start:]: # SHOULD WORK
-                for i in range(3):
-                    b_plus = list(b)
-                    b_plus[i] += 1
-                    b_plus = tuple(b)
+    for c in shells_c[start:]: # SHOULD WORK
+        for a in relevant_shells_a: # Loop in reversed order
+            for i in range(3):
+                b_plus = [0,0,0]
+                b_plus[i] += 1
+                b_plus = tuple(b_plus)
+                
+                a_plus = list(a)
+                a_plus[i] += 1
+                a_plus = tuple(a)
+
+                term1 = I_AC.get((0, a_plus, c), 0.0)
+                # print("term1: ", term1)
+                term2 = AB[i] * I_AC.get((0, a, c), 0.0)
+                # print("term2: ", term2)
+
+                I_ABC[(a, b_plus, c, d)] = term1 + term2
+
+    stop1 = n_shells[max_lb]
+    if max_lb >= 1:
+        for c in shells_c[start:]: # SHOULD WORK
+            for a in relevant_shells_a: # Loop in reversed order
+                for b in shells_b[1:stop1]:
+                    for i in range(3):
+                        b_plus = list(b)
+                        b_plus[i] += 1
+                        b_plus = tuple(b_plus)
                     
-                    a_plus = list(a)
-                    a_plus[i] += 1
-                    a_plus = tuple(a)
+                        a_plus = list(a)
+                        a_plus[i] += 1
+                        a_plus = tuple(a)
 
                
-                    term1 = I_AC.get((0, a_plus, c), 0.0)
-                    term 2 = AB[i] * I_AC.get((0, a, c), 0.0)
+                        term1 = I_ABC.get((a_plus, b, c), 0.0)
+                        term2 = AB[i] * I_ABC.get((a, b, c), 0.0)
 
-                    I_ABC[(a, b_plus, c)] = term1 + term2
+                        I_ABC[(a, b_plus, c, d)] = term1 + term2
 
     return I_ABC
 
+def build_Iabcd(params, I_ABC):
+    C = params['C']
+    D = params['D']
+    CD = params['CD']
+    max_la = params['max_la']
+    max_lb = params['max_lb']
+    max_lc = params['max_lc']
+    max_ld = params['max_ld']
+    n_shells = params['n_shells']
+    shells_a = params['shells_a']
+    shells_b = params['shells_b']
+    shells_c = params['shells_c']
 
-        
 
-def full_obara_saika(a_prim, b_prim, c_prim, d_prim):
-    params = compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim)
-    I_A = build_Ia0(params)  # I(a0|00) up to max_la
+    # Initialize tensor
+    I_ABCD = defaultdict(float)
 
-    if params["max_lc"] >= 1:
-        I_AC = build_Iac(params, I_A)  # I(a0|c0) up to max_la and max_lc
-        I_ABC = transfer_momenta(2, I_AC, 1)  # Transfer to build b (keys: (a, c))
-        I_ABCD = transfer_momenta(4, I_ABC)   # Transfer to build d (keys: (a, b, c))
-    else:
-        I_ABC = transfer_momenta(2, I_A, 0)   # Transfer to build b (keys: a)
-        I_ABCD = transfer_momenta(4, I_ABC)   # Transfer to build d (keys: (a, b))
+    # Select shells from max_lax+max_lb - 1 to max_la (in reverse)
+    relevant_shells_c = get_relevant_shells(shells_c, max_lc, max_lc + max_ld - 1)
+
+    # Might be missing I(ab|c0) in I_ABCD
+    start1 = n_shells[max_la]
+    end1 = n_shells[max_la + 1]
+    start2 = n_shells[max_lb]
+    for a in shells_a[start1:end1]: # Loop in reversed order
+        for b in shells_b[start2:]:
+            for c in relevant_shells_c: # SHOULD WORK
+                for i in range(3):
+                    d_plus = [0,0,0]
+                    d_plus[i] += 1
+                    d_plus = tuple(d_plus)
+                
+                    c_plus = list(a)
+                    c_plus[i] += 1
+                    c_plus = tuple(a)
+
+                    term1 = I_ABC.get((a, b, c_plus), 0.0)
+                    term2 = CD[i] * I_ABC.get((a, b, c), 0.0)
+
+                    I_ABCD[(a, b, c, d_plus)] = term1 + term2
+
+    if max_ld > 1:
+        for a in shells_a[start1:end1]: 
+            for b in shells_b[start2:]:
+                for c in relevant_shells_c: # SHOULD WORK
+                    for d in shells_d[1:]:
+                        for i in range(3):
+                            d_plus = list(d)
+                            d_plus[i] += 1
+                            d_plus = tuple(d_plus)
+                    
+                            c_plus = list(c)
+                            c_plus[i] += 1
+                            c_plus = tuple(c)
+
+               
+                            term1 = I_ABCD.get((a, b, c_plus, d), 0.0)
+                            term2 = CD[i] * I_ABCD.get((a, b, c, d), 0.0)
+
+                            I_ABCD[(a, b, c, d_plus)] = term1 + term2
 
     return I_ABCD
+
+
+def full_obara_saika(params):
+
+    I_A = build_Ia0(params)  # I(a0|00) up to max_la
+
+    if params["max_lc"] > 0:
+        I_AC = build_Iac(params, I_A)  # I(a0|c0) up to max_la and max_lc
+        I_ABC = build_Iabc(params, I_AC)  # Transfer to build b (keys: (a, c))
+        I_ABCD = build_Iabcd(params, I_ABC)   # Transfer to build d (keys: (a, b, c))
+        return I_ABCD
+    else:
+        I_AB = build_Iabc(params, I_A)   # Transfer to build b (keys: a)
+        return I_AB
+
 
 
 # I tensor utilities
@@ -919,11 +1008,16 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     Q = (zeta_c*C + zeta_d*D) / eta
     W = (zeta*P + eta*Q) / (zeta+eta)
     rho = zeta * eta / (zeta + eta)
-    RPQ = P-Q
-    T = rho * np.dot(RPQ, RPQ)
+    RP_Q = P-Q
+    T = rho * np.dot(RP_Q, RP_Q)
 
+    max_la = la + ma + na
+    max_lb = lb + mb + nb
+    max_lc = lc + mc + nc
+    max_ld = ld + md + nd
+    
     # Boys function up to max needed order
-    max_m = la + lb + lc + ld + ma + mb + mc + md + na + nb + nc + nd
+    max_m = max_la + max_lb + max_lc + max_ld
     F = boys_sequence(max_m, T)
 
     # Compute K prefactor for (00|00)
@@ -931,9 +1025,16 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
         RRp = R - R_p
         return 2**0.5 * (pi**(5/4)) / (zeta + zeta_p) * np.exp( - (zeta*zeta_p * np.dot(RRp, RRp)) / (zeta + zeta_p) )
 
+    def S_func(zeta1, zeta2, zeta, R2):
+        return np.exp(- zeta1*zeta2/zeta * (R2))
 
+    zeta_eta_inv = 1/(zeta + eta)
+    AB = A - B
+    AB2 = np.dot(AB, AB)
+    CD = C - D
+    CD2 = np.dot(CD, CD)
     # Prefactors and vectors for recurrences
-    ssss_coeff = K_func(zeta_a, zeta_b, A, B) * K_func(zeta_c, zeta_d, C, D) / sqrt(zeta+eta)
+    ssss_coeff = (np.pi * zeta_eta_inv )**(1.5) * (2*np.pi / rho) * S_func(zeta_a, zeta_b, zeta, AB2) * S_func(zeta_c, zeta_d, eta, CD2)
 
     RP_A = P-A
     RP_B = P-B
@@ -942,14 +1043,33 @@ def compute_primitive_parameters(a_prim, b_prim, c_prim, d_prim):
     RW_P = W-P
     RW_Q = W-Q
 
+    N_SHELLS = {
+        0: 0,   # s: (0,0,0)
+        1: 1,    # s + p: (0,0,0), (1,0,0), (0,1,0), (0,0,1)
+        2: 4,   # s + p + d: (0,0,0), ..., (2,0,0), ..., (0,0,2)
+        3: 10,   # s + p + d + f
+        4: 20,   # s + p + d + f + g
+        5: 35,
+        6: 56,
+        7: 84,
+        8: 120,
+        9: 165,
+        10: 220,
+    }
+
+    shells_a = generate_shells_bfs(max_la+max_lb)
+    shells_b = generate_shells_bfs(max_lb)
+    shells_c = generate_shells_bfs(max_lc)
+    shells_d = generate_shells_bfs(max_ld-1)
 
     return {
         'a_ang': (la, ma, na), 'b_ang': (lb, mb, nb),
         'c_ang': (lc, mc, nc), 'd_ang': (ld, md, nd),
         'zeta': zeta, 'eta': eta, 'rho': rho, 'xi': xi, 'A': A, 'B': B, 'C': C, 'D': D, 'P': P,
         'ssss_coeff': ssss_coeff,
-        'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RW_P': RW_P, 'RW_Q': RW_Q,
-        'F': F, 'max_m': max_m, 'T': T
+        'RP_A': RP_A, 'RP_B': RP_B, 'RQ_C': RQ_C, 'RQ_D': RQ_D, 'RP_Q': RP_Q, 'RW_P': RW_P, 'RW_Q': RW_Q, 'AB': AB, 'CD':CD,
+        'boys_sequence': F, 'max_m': max_m, 'T': T, 'max_la': max_la, 'max_lb': max_lb, 'max_lc': max_lc, 'max_ld': max_ld,
+        'n_shells': N_SHELLS, 'shells_a': shells_a, 'shells_b': shells_b, 'shells_c': shells_c, 'shells_d': shells_d,
         }
 
 # Recursion logic
@@ -1204,6 +1324,7 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
                         gaussian_norm(zeta_d, ang_d)
                     )
 
+
                     # Compute deterministic parameters for OS recursion
                     params = compute_primitive_parameters(
                         (zeta_a, center_a, ang_a),
@@ -1213,7 +1334,7 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
                     )
 
                     # Compute primitive ERI using OS recursion
-                    val_tensor = primitive_eri(params)
+                    val_tensor = full_obara_saika(params)
 
                     # Access the specific angular momentum component
                     la, ma, na = ang_a
@@ -1221,11 +1342,14 @@ def compute_eri_element(mu, nu, lam, sig, basis_set):
                     lc, mc, nc = ang_c
                     ld, md, nd = ang_d
 
-                    val = val_tensor[0][la, ma, na, lb, mb, nb, lc, mc, nc, ld, md, nd]
+                    val = val_tensor.get(((la, ma, na), (lb, mb, nb), (lc, mc, nc), (ld, md, nd)),0.0)
 
                     # Accumulate total ERI with weights and normalization
                     total_weight = coeff_a * coeff_b * coeff_c * coeff_d
                     eri += total_weight * val * norm
+                    print("weight: ", total_weight)
+                    print("val: ", val)
+                    print("norm: ", norm)
 
     return eri
 

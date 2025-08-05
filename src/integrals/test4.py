@@ -31,12 +31,13 @@ def build_Ia0(params):
     rho_over_zeta = rho / zeta
     half_zeta_inv = 0.5 / zeta
 
+    c = (0,0,0)
     I_A = defaultdict(float)
 
     # Build I^(m)(00|00)
     n1 = max_la + max_lb + max_lc + max_ld + 1
     for m in range(n1):
-        I_A[(m, shells_a[0])] = prefactor * boys[m]
+        I_A[(m, c, c)] = prefactor * boys[m] # Introduce the c key early
 
     # Build I^(m)(a0|00) via vertical recursion
     stop = n_shells[max_la+max_lb]
@@ -58,17 +59,17 @@ def build_Ia0(params):
                 key_am_m1 = (m+1, a_minus)
 
                 # Recurrence relation:
-                term1 = RP_A[i] * I_A.get((m, a), 0.0)
-                term2 = rho_over_zeta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                term1 = RP_A[i] * I_A.get((m, a, c), 0.0)
+                term2 = rho_over_zeta * RP_Q[i] * I_A.get((m+1, a, c), 0.0)
                 if a[i] > 0:
                     term3 = a[i] * half_zeta_inv * (
                         I_A.get((m, a_minus), 0.0) -
-                        rho_over_zeta * I_A.get((m+1, a_minus), 0.0)
+                        rho_over_zeta * I_A.get((m+1, a_minus, c), 0.0)
                     ) 
                 else:
                     term3 = 0.0
 
-                I_A[(m, a_plus)] = term1 - term2 + term3
+                I_A[(m, a_plus, c)] = term1 - term2 + term3
     return I_A
 
 def build_Iac(params, I_A):
@@ -95,12 +96,12 @@ def build_Iac(params, I_A):
     # Port I^(m)(00|00) to I_AC
     n1 = max_la + max_lb + max_lc + max_ld + 1
     for m in range(n1):
-        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0)),0.0)
+        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0), (0,0,0)),0.0)
 
     # Build I(a0|c0) via vertical recursion
     # Generate p shell from I_A first
     for a in shells_a:
-        for m in range(max_lc+max_ld+1):
+        for m in range(max_lc+max_ld):
             for i in range(3):
                 c_plus = [0,0,0]
                 c_plus[i] += 1
@@ -110,10 +111,10 @@ def build_Iac(params, I_A):
                 a_minus[i] -= 1
                 a_minus = tuple(a_minus)
 
-                term1 = RQ_C[i] * I_A.get((m,a), 0.0)
-                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                term1 = RQ_C[i] * I_A.get((m,a, (0,0,0)), 0.0)
+                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a, (0,0,0)), 0.0)
                 if a[i] > 0:
-                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus), 0.0)
+                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus, (0,0,0)), 0.0)
                 else:
                     term4 = 0
                 I_AC[(m, a, c_plus)] = term1 + term2 + term4
@@ -179,6 +180,8 @@ def build_Iabc(params, I_AC):
 
     AB = A - B
 
+    d = (0,0,0)
+
     # Initialize tensor
     I_ABC = defaultdict(float)
 
@@ -186,8 +189,8 @@ def build_Iabc(params, I_AC):
     relevant_shells_a = get_relevant_shells(shells_a, max_la, max_la + max_lb - 1)
 
     start = n_shells[max_lc]
-    for a in relevant_shells_a: # Loop in reversed order
-        for c in shells_c[start:]: # SHOULD WORK
+    for c in shells_c[start:]: # SHOULD WORK
+        for a in relevant_shells_a: # Loop in reversed order
             for i in range(3):
                 b_plus = [0,0,0]
                 b_plus[i] += 1
@@ -202,14 +205,13 @@ def build_Iabc(params, I_AC):
                 term2 = AB[i] * I_AC.get((0, a, c), 0.0)
                 # print("term2: ", term2)
 
-                I_ABC[(a, b_plus, c)] = term1 + term2
+                I_ABC[(a, b_plus, c, d)] = term1 + term2
 
     stop1 = n_shells[max_lb]
     if max_lb >= 1:
-        for a in relevant_shells_a: # Loop in reversed order
-            for b in shells_b[1:stop1]:
-                # print("b shell: ", b)
-                for c in shells_c[start:]: # SHOULD WORK
+        for c in shells_c[start:]: # SHOULD WORK
+            for a in relevant_shells_a: # Loop in reversed order
+                for b in shells_b[1:stop1]:
                     for i in range(3):
                         b_plus = list(b)
                         b_plus[i] += 1
@@ -223,9 +225,72 @@ def build_Iabc(params, I_AC):
                         term1 = I_ABC.get((a_plus, b, c), 0.0)
                         term2 = AB[i] * I_ABC.get((a, b, c), 0.0)
 
-                        I_ABC[(a, b_plus, c)] = term1 + term2
+                        I_ABC[(a, b_plus, c, d)] = term1 + term2
 
     return I_ABC
+
+def build_Iabcd(params, I_ABC):
+    C = params['C']
+    D = params['D']
+    max_la = params['max_la']
+    max_lb = params['max_lb']
+    max_lc = params['max_lc']
+    max_ld = params['max_ld']
+    n_shells = params['n_shells']
+    shells_a = params['shells_a']
+    shells_b = params['shells_b']
+    shells_c = params['shells_c']
+
+    CD = C - D
+
+    # Initialize tensor
+    I_ABCD = defaultdict(float)
+
+    # Select shells from max_lax+max_lb - 1 to max_la (in reverse)
+    relevant_shells_c = get_relevant_shells(shells_c, max_lc, max_lc + max_ld - 1)
+
+    # Might be missing I(ab|c0) in I_ABCD
+    start1 = n_shells[max_la]
+    end1 = n_shells[max_la + 1]
+    start2 = n_shells[max_lb]
+    for a in shells_a[start1:end1]: # Loop in reversed order
+        for b in shells_b[start2:]:
+            for c in relevant_shells_c: # SHOULD WORK
+                for i in range(3):
+                    d_plus = [0,0,0]
+                    d_plus[i] += 1
+                    d_plus = tuple(d_plus)
+                
+                    c_plus = list(a)
+                    c_plus[i] += 1
+                    c_plus = tuple(a)
+
+                    term1 = I_ABC.get((a, b, c_plus), 0.0)
+                    term2 = CD[i] * I_AC.get((a, b, c), 0.0)
+
+                    I_ABCD[(a, b, c, d_plus)] = term1 + term2
+
+    if max_ld > 1:
+        for a in shells_a[start1:end1]: 
+            for b in shells_b[start2:]:
+                for c in relevant_shells_c: # SHOULD WORK
+                    for d in shells_d[1:]:
+                        for i in range(3):
+                            d_plus = list(d)
+                            d_plus[i] += 1
+                            d_plus = tuple(d_plus)
+                    
+                            c_plus = list(c)
+                            c_plus[i] += 1
+                            c_plus = tuple(c)
+
+               
+                            term1 = I_ABCD.get((a, b, c_plus, d), 0.0)
+                            term2 = CD[i] * I_ABCD.get((a, b, c, d), 0.0)
+
+                            I_ABCD[(a, b, c, d_plus)] = term1 + term2
+
+    return I_ABCD
 
 
 def get_relevant_shells(shells, min_sum, max_sum):
@@ -242,6 +307,8 @@ def get_relevant_shells(shells, min_sum, max_sum):
 def generate_shells_bfs(max_l):
     from collections import deque
     shells = [(0, 0, 0)]
+    if max_l == 0:
+        return shells
     queue = deque(shells)
     
     while queue:
@@ -273,18 +340,23 @@ N_SHELLS = {
     3: 10,   # s + p + d + f
     4: 20,   # s + p + d + f + g
     5: 35,
+    6: 56,
+    7: 84,
+    8: 120,
+    9: 165,
+    10: 220,
 }
 
 
 benchmark= {
-    'max_la': 3,
-    'max_lb': 2,
-    'max_lc': 2,
-    'max_ld': 1,
-    'shells_a': 5, # How many shells to generate max_la + max_lb
-    'shells_b': 2,  
-    'shells_c': 3, # max_lc + max_ld
-    'shells_d': 1, 
+    'max_la': 1,
+    'max_lb': 1,
+    'max_lc': 0,
+    'max_ld': 0,
+    'shells_a': 2, # How many shells to generate max_la + max_lb
+    'shells_b': 1,  
+    'shells_c': 0, # max_lc + max_ld
+    'shells_d': 0, # max_ld - 1
 
 }
 
@@ -296,6 +368,8 @@ shells_d = generate_shells_bfs(benchmark['shells_d'])
 params = {
     'A': np.array([1.0, 1.0, 1.0]),
     'B': np.array([-1.0, 1.0, 1.0]),
+    'C': np.array([1.0, 1.0, 1.0]),
+    'D': np.array([-1.0, 1.0, 1.0]),
     'RQ_C': [0.1, 0.2, 0.3],
     'RP_A': [0.1, -0.2, 0.3],
     'RP_Q': [0.4, 0.5, 0.6],
@@ -307,7 +381,7 @@ params = {
     'max_lb': benchmark['max_lb'],
     'max_ld': benchmark['max_ld'],
     'ssss_prefactor': 1.0,
-    'boys_sequence': [1.0, 0.5, 0.333, 0.25, 0.20, 1.66, 1.0, 1.0, 1.0,1.0,1.0],
+    'boys_sequence': [1.0, 0.5, 0.333, 0.25, 0.20, 1.66, 1.0, 1.0, 1.0,1.0,1.0, 10.0, 10.0],
     'shells_a': shells_a,
     'shells_b': shells_b,
     'shells_c': shells_c,
@@ -344,24 +418,31 @@ params = {
 # --- Simple test I_ABC ---
 start_time = time.time()
 I_A = build_Ia0(params)
-I_AC = build_Iac(params, I_A)
-I_ABC = build_Iabc(params, I_AC)
+# I_AC = build_Iac(params, I_A)
+I_ABC = build_Iabc(params, I_A)
+# I_ABCD = build_Iabcd(params, I_ABC)
 end_time = time.time()
 
-# # Print results I_ABC
-print("--- Printing I_ABC --- \n")
-for k, v in I_ABC.items():
-    print(f"I({k[0]}{k[1]}|{k[2]}0) = {v:.5f}")
+# Print results I_A
+print("--- Printing I_A --- \n")
+for k, v in I_A.items():
+    print(f"I^{k[0]}({k[1]}|0) = {v:.3f}")
 
-# # Print results I_AC
+# Print results I_AC
 # print("--- Printing I_AC --- \n")
 # for k, v in I_AC.items():
 #     print(f"I^{k[0]}({k[1]}|{k[2]}) = {v:.8f}")
 
-# # Print results I_A
-# print("--- Printing I_A --- \n")
-# for k, v in I_A.items():
-#     print(f"I^{k[0]}({k[1]}|0) = {v:.5f}")
+# Print results I_ABC
+print("--- Printing I_ABC --- \n")
+for k, v in I_ABC.items():
+    print(f"I({k[0]}{k[1]}|{k[2]}{k[3]}) = {v:.3f}")
+
+
+# Print results I_ABCD
+# print("--- Printing I_ABCD --- \n")
+# for k, v in I_ABCD.items():
+#     print(f"I({k[0]}{k[1]}|{k[2]}{k[3]}) = {v:.5f}")
 
 
 print(f"Total runtime2: {end_time - start_time:.8f} seconds")

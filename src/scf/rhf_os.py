@@ -211,9 +211,9 @@ def print_final_results(results):
     # print_matrix("Kinetic (T)", results['kinetic_matrix'])
     # print_matrix("Nuclear Attraction (V)", results['nuclear_matrix'])
 
-    # print("S matrix:\n", results['overlap_matrix'])
-    # print("T matrix:\n", results['kinetic_matrix'])
-    # print("V matrix:\n", results['nuclear_matrix'])
+    print("S matrix:\n", results['overlap_matrix'])
+    print("T matrix:\n", results['kinetic_matrix'])
+    print("V matrix:\n", results['nuclear_matrix'])
     # print("P matrix:\n", results['density_matrix'])
     # print("C matrix:\n", results['orbital_coefficients'])
     # print("H matrix:\n", results['core_hamiltonian'])
@@ -222,10 +222,9 @@ def print_final_results(results):
     eri_size = len(eri)
 
     print("ERI tensor shape:\n", eri_size)
-    # if 'eri_tensor' in results:
-    #     print("\nUnique Electron Repulsion Integrals (ERIs):")
-    #     eri_dict = results['eri_tensor']
-    #     for key, value in eri_dict.items():
-    #         munu, lamsig = key  # Unpack the canonical key
-    #         print(f"({munu}|{lamsig}): {value:.6f}")
+    print("\nUnique Electron Repulsion Integrals (ERIs):")
+    eri_dict = results['eri_tensor']
+    for key, value in eri_dict.items():
+        munu, lamsig = key  # Unpack the canonical key
+        print(f"({munu}|{lamsig}): {value:.6f}")
 

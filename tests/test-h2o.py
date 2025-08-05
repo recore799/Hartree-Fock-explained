@@ -10,10 +10,18 @@ class Primitive:
         self.center = np.array(center)
         self.angmom = angmom
 
+# class BasisFunction:
+#     def __init__(self, primitives):
+#         self.primitives = [Primitive(zeta, coeff, center, angmom)
+
 class BasisFunction:
     def __init__(self, primitives):
-        self.primitives = [Primitive(zeta, coeff, center, angmom)
-                           for zeta, coeff, center, angmom in primitives]
+        self.primitives = sorted(
+            [Primitive(zeta, coeff, center, angmom) for zeta, coeff, center, angmom in primitives],
+            key=lambda p: (sum(p.angmom), p.zeta),  # sort by angular momentum, then decreasing zeta
+            reverse=True
+        )
+
 
 def build_H2O_sto3g_basis():
     basis_set = {}
@@ -80,4 +88,3 @@ start_time = time.time()
 scf_rhf(n_elec=10, R_nuc=R_nuc, Z_nuc=Z_nuc, verbose=1, basis_set=basis_set, nuclei=nuclei)
 end_time = time.time()
 
-print(f"Total runtime: {end_time - start_time:.4f} seconds")
