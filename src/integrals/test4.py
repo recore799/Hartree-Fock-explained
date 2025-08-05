@@ -24,7 +24,9 @@ def build_Ia0(params):
     prefactor = params['ssss_prefactor']
     boys = params['boys_sequence']
     shells_a = params['shells_a']
-    # n_shells = params['n_shells']
+    n_shells = params['n_shells']
+
+    stop = n_shells[max_la] # Make recursion stop before the last shell starts so it doesn't go over
 
     rho_over_zeta = rho / zeta
     half_zeta_inv = 0.5 / zeta
@@ -32,14 +34,15 @@ def build_Ia0(params):
     I_A = defaultdict(float)
 
     # Build I^(m)(00|00)
-    for m in range(max_m):
+    for m in range(max_m+1):
         I_A[(m, shells_a[0])] = prefactor * boys[m]
 
-    # Build I(a0|00) via vertical recursion
-    for a in shells_a:
+    # Build I^(m)(a0|00) via vertical recursion
+    for a in shells_a[:stop]:
+        print(a)
         current_l = sum(a)
-        n = max_m - current_l
-        for m in range(n):
+        n = max_m - current_l + 1 # make sure that max_m is 
+        for m in range(n): # This is what prevents the loop from going over to the next shell
             for i in range(3):  # x, y, z directions
                 a_plus = list(a)
                 a_plus[i] += 1
@@ -87,38 +90,39 @@ def build_Iac(params, I_A):
 
     I_AC = defaultdict(float)
 
-    # Port I(00|00) to I_AC
-    I_AC[(0,(0,0,0),(0,0,0))] = I_A.get((0,(0,0,0)),0.0)
-
-    n_shells_to_process_a = n_shells[max_la]
+    # Port I^(m)(00|00) to I_AC
+    for m in range(max_m + 1):
+        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0)),0.0)
 
     # Build I(a0|c0) via vertical recursion
     # Generate p shell from I_A first
-    for a in shells_a[:n_shells_to_process_a]:
-        for i in range(3):
-            c_plus = [0,0,0]
-            c_plus[i] += 1
-            c_plus = tuple(c_plus)
+    for a in shells_a:
+        for m in range(max_lc):
+            for i in range(3):
+                c_plus = [0,0,0]
+                c_plus[i] += 1
+                c_plus = tuple(c_plus)
 
-            a_minus = list(a)
-            a_minus[i] -= 1
-            a_minus = tuple(a_minus)
+                a_minus = list(a)
+                a_minus[i] -= 1
+                a_minus = tuple(a_minus)
 
-            term1 = RQ_C[i] * I_A.get((0,a), 0.0)
-            term2 = rho_over_eta * RP_Q[i] * I_A.get((1, a), 0.0)
-            if a[i] > 0:
-                term4 = a[i] * half_zeta_eta_inv * I_A.get((1, a_minus), 0.0)
-            else:
-                term4 = 0
-            I_AC[(0, a, c_plus)] = term1 + term2 + term4
+                term1 = RQ_C[i] * I_A.get((m,a), 0.0)
+                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                if a[i] > 0:
+                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus), 0.0)
+                else:
+                    term4 = 0
+                I_AC[(m, a, c_plus)] = term1 + term2 + term4
 
     # Generete higher shells only when needed 
+    stop = n_shells[max_lc]
     if max_lc >= 2:
-        for c in shells_c:
+        for c in shells_c[:stop]:
             current_l = sum(c)
             n = max_lc - current_l
             for m in range(n):
-                for a in shells_a[:n_shells_to_process_a]:
+                for a in shells_a:
                     for i in range(3):  # x, y, z directions
                         c_plus = list(c)
                         c_plus[i] += 1
@@ -316,21 +320,21 @@ def generate_shells_bfs(max_l):
 # Index of last tuple in shell? s=0, p=1, d=2, f=3, g=4
 N_SHELLS = {
     0: 0,   # s: (0,0,0)
-    1: 4,    # s + p: (0,0,0), (1,0,0), (0,1,0), (0,0,1)
-    2: 10,   # s + p + d: (0,0,0), ..., (2,0,0), ..., (0,0,2)
-    3: 20,   # s + p + d + f
-    4: 35,   # s + p + d + f + g
-    5: 100,
+    1: 1,    # s + p: (0,0,0), (1,0,0), (0,1,0), (0,0,1)
+    2: 4,   # s + p + d: (0,0,0), ..., (2,0,0), ..., (0,0,2)
+    3: 10,   # s + p + d + f
+    4: 20,   # s + p + d + f + g
+    5: 35,
 }
 
 
 
 benchmark= {
-    'max_la': 4,
+    'max_la': 1,
     'max_lc': 1,
-    'max_m': 4,
-    'shells_a': 8, # How many shells to generate
-    'shells_c': 8,
+    'max_m': 3, # has to be max(max_la, max_lc) + max_lb maybe need to adjust when doing D
+    'shells_a': 2, # How many shells to generate
+    'shells_c': 2,
 
 }
 
@@ -355,44 +359,44 @@ params = {
 }
 
 # --- Simple test ---
-# start_time = time.time()
-# I_A = build_Ia0(params)
-# I_AC = build_Iac(params, I_A)
-# end_time = time.time()
+start_time = time.time()
+I_A = build_Ia0(params)
+I_AC = build_Iac(params, I_A)
+end_time = time.time()
 
 
-# # Print results I_AC
-# for k, v in I_AC.items():
-#     print(f"new I^{k[0]}({k[1]}|{k[2]}) = {v:.2f}")
+# Print results I_AC
+for k, v in I_AC.items():
+    print(f"I^{k[0]}({k[1]}|{k[2]}) = {v:.2f}")
 
-# print(f"Total runtime2: {end_time - start_time:.8f} seconds")
+print(f"Total runtime2: {end_time - start_time:.8f} seconds")
 
 
-# Print results I_A
+# # Print results I_A
 # for k, v in I_A.items():
-#     print(f"new I^{k[0]}({k[1]}|0) = {v:.5f}")
+#     print(f"I^{k[0]}({k[1]}|0) = {v:.5f}")
 
 
-# --- Benchmark Functions ---
-def run_new_code():
-    I_A = build_Ia0(params)
-    I_AC = build_Iac(params, I_A)
-    return I_AC
+# # --- Benchmark Functions ---
+# def run_new_code():
+#     I_A = build_Ia0(params)
+#     I_AC = build_Iac(params, I_A)
+#     return I_AC
 
-def run_old_code():
-    I_A = build_Ia0_old(params)
-    I_AC = build_Iac_old(params, I_A)
-    return I_AC
+# def run_old_code():
+#     I_A = build_Ia0_old(params)
+#     I_AC = build_Iac_old(params, I_A)
+#     return I_AC
 
-# --- Timing ---
-new_time = timeit(run_new_code, number=1000) / 100  # Average over 100 runs
-old_time = timeit(run_old_code, number=1000) / 100
+# # --- Timing ---
+# new_time = timeit(run_new_code, number=1000) / 100  # Average over 100 runs
+# old_time = timeit(run_old_code, number=1000) / 100
 
-# --- Results ---
-print("\n--- Benchmark Parameters ---")
-print(benchmark)
-print("\n--- Benchmark Results 1000 runs ---")
-print(f"Old code: {old_time:.6f} sec/call")
-print(f"New code: {new_time:.6f} sec/call")
-print(f"Speedup: {old_time / new_time:.2f}x")
-print(f"Time saved: {(old_time - new_time)*1000:.2f} ms per call")
+# # --- Results ---
+# print("\n--- Benchmark Parameters ---")
+# print(benchmark)
+# print("\n--- Benchmark Results 1000 runs ---")
+# print(f"Old code: {old_time:.6f} sec/call")
+# print(f"New code: {new_time:.6f} sec/call")
+# print(f"Speedup: {old_time / new_time:.2f}x")
+# print(f"Time saved: {(old_time - new_time)*1000:.2f} ms per call")
