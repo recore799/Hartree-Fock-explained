@@ -93,12 +93,14 @@ def build_Ia0(params):
     RP_Q = params['RP_Q']
     rho = params['rho']
     zeta = params['zeta']
-    max_m = params['max_m']
     max_la = params['max_la']
+    max_lb = params['max_lb']
+    max_lc = params['max_lc']
+    max_ld = params['max_ld']
     prefactor = params['ssss_prefactor']
     boys = params['boys_sequence']
     shells_a = params['shells_a']
-    # n_shells = params['n_shells']
+    n_shells = params['n_shells']
 
     rho_over_zeta = rho / zeta
     half_zeta_inv = 0.5 / zeta
@@ -106,14 +108,17 @@ def build_Ia0(params):
     I_A = defaultdict(float)
 
     # Build I^(m)(00|00)
-    for m in range(max_m):
+    n1 = max_la + max_lb + max_lc + max_ld + 1
+    for m in range(n1):
         I_A[(m, shells_a[0])] = prefactor * boys[m]
 
-    # Build I(a0|00) via vertical recursion
-    for a in shells_a:
+    # Build I^(m)(a0|00) via vertical recursion
+    stop = n_shells[max_la+max_lb]
+    for a in shells_a[:stop]:
+        print(a)
         current_l = sum(a)
-        n = max_m - current_l
-        for m in range(n):
+        n = max_la + max_lb + max_lc + max_ld - current_l
+        for m in range(n): # Determines how deep the recursion goes
             for i in range(3):  # x, y, z directions
                 a_plus = list(a)
                 a_plus[i] += 1
@@ -147,9 +152,10 @@ def build_Iac(params, I_A):
     rho = params['rho']
     eta = params['eta']
     zeta = params['zeta']
-    max_m = params['max_m']
-    max_lc = params['max_lc']
     max_la = params['max_la']
+    max_lb = params['max_lb']
+    max_lc = params['max_lc']
+    max_ld = params['max_ld']
     boys = params['boys_sequence']
     shells_a = params['shells_a']
     shells_c = params['shells_c']
@@ -161,35 +167,39 @@ def build_Iac(params, I_A):
 
     I_AC = defaultdict(float)
 
-    # Port I(00|00) to I_AC
-    I_AC[(0,(0,0,0),(0,0,0))] = I_A.get((0,(0,0,0)),0.0)
+    # Port I^(m)(00|00) to I_AC
+    n1 = max_la + max_lb + max_lc + max_ld + 1
+    for m in range(n1):
+        I_AC[(m,(0,0,0),(0,0,0))] = I_A.get((m,(0,0,0)),0.0)
 
     # Build I(a0|c0) via vertical recursion
     # Generate p shell from I_A first
     for a in shells_a:
-        for i in range(3):
-            c_plus = [0,0,0]
-            c_plus[i] += 1
-            c_plus = tuple(c_plus)
+        for m in range(max_lc+max_ld+1):
+            for i in range(3):
+                c_plus = [0,0,0]
+                c_plus[i] += 1
+                c_plus = tuple(c_plus)
 
-            a_minus = list(a)
-            a_minus[i] -= 1
-            a_minus = tuple(a_minus)
+                a_minus = list(a)
+                a_minus[i] -= 1
+                a_minus = tuple(a_minus)
 
-            term1 = RQ_C[i] * I_A.get((0,a), 0.0)
-            term2 = rho_over_eta * RP_Q[i] * I_A.get((1, a), 0.0)
-            if a[i] > 0:
-                term4 = a[i] * half_zeta_eta_inv * I_A.get((1, a_minus), 0.0)
-            else:
-                term4 = 0
-            I_AC[(0, a, c_plus)] = term1 + term2 + term4
+                term1 = RQ_C[i] * I_A.get((m,a), 0.0)
+                term2 = rho_over_eta * RP_Q[i] * I_A.get((m+1, a), 0.0)
+                if a[i] > 0:
+                    term4 = a[i] * half_zeta_eta_inv * I_A.get((m+1, a_minus), 0.0)
+                else:
+                    term4 = 0
+                I_AC[(m, a, c_plus)] = term1 + term2 + term4
 
     # Generete higher shells only when needed 
-    if max_lc >= 2:
+    if max_lc >= 2 or max_ld >= 1:
         for c in shells_c:
+            print("shell: ", c)
             current_l = sum(c)
-            n = max_lc - current_l
-            for m in range(n):
+            n2 = max_lc + max_ld - current_l
+            for m in range(n2):
                 for a in shells_a:
                     for i in range(3):  # x, y, z directions
                         c_plus = list(c)
@@ -230,7 +240,6 @@ def build_Iac(params, I_A):
 
 
 
-
 def get_relevant_shells(shells, min_sum, max_sum):
     """Returns shells where min_sum <= sum(shell) <= max_sum, in reverse order."""
     start_idx = next(i for i, shell in enumerate(shells) if sum(shell) >= min_sum)
@@ -246,6 +255,9 @@ def build_Iabc(params, I_AC):
     B = params['B']
     max_la = params['max_la']
     max_lb = params['max_lb']
+    max_lc = params['max_lc']
+    max_ld = params['max_ld']
+    n_shells = params['n_shells']
     shells_a = params['shells_a']
     shells_b = params['shells_b']
     shells_c = params['shells_c']
@@ -255,16 +267,13 @@ def build_Iabc(params, I_AC):
     # Initialize tensor
     I_ABC = defaultdict(float)
 
-    reversed(shells_a)
-    reversed(shells_c)
-
     # Select shells from max_lax+max_lb - 1 to max_la (in reverse)
     relevant_shells_a = get_relevant_shells(shells_a, max_la, max_la + max_lb -1)
-    relevant_shells_c = get_relevant_shells(shells_c, max_la, max_lc + max_lb -1)
 
+    start = n_shells[max_lc]
     for a in relevant_shells_a: # Loop in reversed order
-        for c in relevant_shells_c:
-            for b in shells_b:
+        for b in shells_b:
+            for c in shells_c[start:]: # SHOULD WORK
                 for i in range(3):
                     b_plus = list(b)
                     b_plus[i] += 1
@@ -272,13 +281,15 @@ def build_Iabc(params, I_AC):
                     
                     a_plus = list(a)
                     a_plus[i] += 1
-                    b_plus = tuple(b)
-                
+                    a_plus = tuple(a)
+
+               
                     term1 = I_AC.get((0, a_plus, c), 0.0)
                     term 2 = AB[i] * I_AC.get((0, a, c), 0.0)
 
                     I_ABC[(a, b_plus, c)] = term1 + term2
 
+    return I_ABC
 
 
         
